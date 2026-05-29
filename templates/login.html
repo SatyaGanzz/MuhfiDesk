@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - MuhfiDesk</title>
+    <style>
+        /* Glassmorphism CSS */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .login-container { width: 100%; max-width: 420px; perspective: 1000px; }
+        .login-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .login-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #06b6d4, transparent);
+            transition: left 0.5s ease;
+        }
+        .login-card:hover::before { left: 100%; }
+        .login-card:hover { transform: translateY(-5px); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15); }
+        .login-header { text-align: center; margin-bottom: 32px; }
+        .login-header h2 {
+            color: white; font-size: 2rem; font-weight: 700; margin-bottom: 8px;
+            background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .login-header p { color: rgba(255, 255, 255, 0.8); font-size: 1rem; }
+        .form-group { margin-bottom: 24px; position: relative; }
+        .input-wrapper { position: relative; display: flex; flex-direction: column; }
+        .input-wrapper input {
+            background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px; padding: 12px 16px; color: white;
+            font-size: 16px; width: 100%; outline: none; backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        .input-wrapper input::placeholder { color: rgba(255, 255, 255, 0.3); }
+        .input-wrapper label {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+            margin-bottom: 8px;
+            font-weight: 500;
+            display: block;
+        }
+        .input-wrapper input:focus {
+            border-color: #06b6d4; background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 25px rgba(6, 182, 212, 0.2);
+        }
+        .input-wrapper input:-webkit-autofill,
+        .input-wrapper input:-webkit-autofill:hover,
+        .input-wrapper input:-webkit-autofill:focus,
+        .input-wrapper input:-webkit-autofill:active {
+            transition: background-color 5000s ease-in-out 0s;
+            -webkit-text-fill-color: white !important;
+        }
+        .focus-border {
+            position: absolute; bottom: 0; left: 50%; width: 0; height: 2px;
+            background: linear-gradient(90deg, #06b6d4, #6366f1); transition: all 0.3s ease;
+            transform: translateX(-50%); border-radius: 2px;
+        }
+        .input-wrapper input:focus ~ .focus-border { width: 100%; }
+        
+        .error-message {
+            display: block; color: #ef4444; font-size: 12px; font-weight: 500; margin-top: 6px;
+            opacity: 0; transform: translateY(-10px); transition: all 0.3s ease;
+            background: rgba(239, 68, 68, 0.1); padding: 4px 8px; border-radius: 6px; backdrop-filter: blur(10px);
+        }
+        .error-message.show { opacity: 1; transform: translateY(0); }
+        .btn {
+            background: linear-gradient(135deg, #6366f1 0%, #06b6d4 100%);
+            border: none; border-radius: 12px; padding: 16px 24px; color: white;
+            font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;
+            position: relative; overflow: hidden; width: 100%; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+            margin-top: 10px;
+        }
+        .btn::before {
+            content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(99, 102, 241, 0.6); }
+        .btn:hover::before { left: 100%; }
+        .btn:disabled { opacity: 0.7; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h2>MuhfiDesk</h2>
+                <p>Sign in to your account</p>
+            </div>
+            
+            <form class="login-form" id="loginForm" onsubmit="doLogin(event)">
+                <div class="form-group">
+                    <div class="input-wrapper">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" required autocomplete="username" placeholder="Enter username">
+                        <span class="focus-border"></span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="input-wrapper password-wrapper">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="Enter password">
+                        <span class="focus-border"></span>
+                    </div>
+                </div>
+                
+                <span class="error-message" id="error-msg"></span>
+
+                <button type="submit" class="btn" id="login-btn">
+                    <span class="btn-text">Sign In</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function doLogin(e) {
+            e.preventDefault();
+            const btn = document.getElementById('login-btn');
+            const btnText = btn.querySelector('.btn-text');
+            const errorMsg = document.getElementById('error-msg');
+
+            btn.disabled = true;
+            btnText.textContent = 'Signing in...';
+            errorMsg.classList.remove('show');
+
+            fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: document.getElementById('username').value,
+                    password: document.getElementById('password').value
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    btnText.textContent = 'Success!';
+                    setTimeout(() => window.location.href = '/dashboard', 500);
+                } else {
+                    errorMsg.textContent = data.error || 'Login failed';
+                    errorMsg.classList.add('show');
+                    btn.disabled = false;
+                    btnText.textContent = 'Sign In';
+                }
+            })
+            .catch(err => {
+                errorMsg.textContent = 'Connection error';
+                errorMsg.classList.add('show');
+                btn.disabled = false;
+                btnText.textContent = 'Sign In';
+            });
+        }
+        
+        // Entrance animation
+        document.addEventListener('DOMContentLoaded', () => {
+            const inputs = document.querySelectorAll('input');
+            inputs.forEach((input, index) => {
+                input.style.opacity = '0';
+                input.style.transform = 'translateY(10px)';
+                setTimeout(() => {
+                    input.style.transition = 'all 0.4s ease';
+                    input.style.opacity = '1';
+                    input.style.transform = 'translateY(0)';
+                }, 200 + index * 150);
+            });
+        });
+    </script>
+
+    <script src="{{ url_for('static', filename='theme.js') }}"></script>
+</body>
+</html>
