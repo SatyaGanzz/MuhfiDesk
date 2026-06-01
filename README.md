@@ -15,8 +15,6 @@
 
 **MuhfiDesk** is a powerful and elegant server management dashboard designed to make managing your homelab or VPS as easy as a single click. Inspired by CasaOS, MuhfiDesk runs **bare-metal** on your system (no Docker required for the core dashboard), offering blazing-fast performance while still allowing you to deploy and manage hundreds of Dockerized applications through its built-in App Store.
 
-> **Note:** Replace the image below with an actual screenshot of your dashboard!
-> 
 > ![Dashboard Screenshot](https://via.placeholder.com/800x450?text=Your+Beautiful+Dashboard+Screenshot+Here)
 
 ---
@@ -38,13 +36,17 @@
 MuhfiDesk can be installed on both Linux and Windows with a single command. The installer will automatically download the necessary dependencies, set up a virtual environment, and register MuhfiDesk as a background service.
 
 ### 🐧 Linux (Ubuntu / Debian / RHEL)
+
 Open your terminal and run:
+
 ```bash
 wget -qO- https://raw.githubusercontent.com/SatyaGanzz/MuhfiDesk/main/install.sh | sudo bash
 ```
 
 ### 🪟 Windows
+
 Open **PowerShell as Administrator** and run:
+
 ```powershell
 iwr -useb https://raw.githubusercontent.com/SatyaGanzz/MuhfiDesk/main/install.ps1 | iex
 ```
@@ -59,18 +61,21 @@ Once installed, simply open your web browser and navigate to:
 If you prefer to install MuhfiDesk manually or want to contribute to the project:
 
 1. **Clone the repository:**
+
    ```bash
    git clone https://github.com/SatyaGanzz/MuhfiDesk.git
    cd MuhfiDesk
    ```
 
 2. **Create a Python Virtual Environment:**
+
    ```bash
    python3 -m venv .venv
    source .venv/bin/activate  # On Windows: .venv\Scripts\activate
    ```
 
 3. **Install Dependencies:**
+
    ```bash
    pip install -r requirements.txt
    ```
@@ -89,12 +94,14 @@ If you prefer to install MuhfiDesk manually or want to contribute to the project
   <img src="https://via.placeholder.com/400x250?text=System+Monitoring" width="45%" />
 </p>
 
-*(Replace these placeholders with actual screenshots of the App Store and Monitoring page by uploading your images to the repository and updating the links here)*
+_(Replace these placeholders with actual screenshots of the App Store and Monitoring page by uploading your images to the repository and updating the links here)_
 
 ---
 
 ## 🤝 Contributing
+
 Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/SatyaGanzz/MuhfiDesk/issues) if you want to contribute.
 
 ## 📄 License
+
 This project is licensed under the **MIT License**. See the `LICENSE` file for details.
