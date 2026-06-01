@@ -11,7 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
     fetch('/api/system')
         .then(r => r.json())
         .then(data => {
-            document.getElementById('hostname').textContent = data.node;
+            // Set default to MuhfiDesk, override with settings if available later
+            document.getElementById('hostname').textContent = "MuhfiDesk";
             document.getElementById('os-info').textContent = data.system + " " + data.release;
             document.getElementById('cpu-model').textContent = data.processor;
         });
