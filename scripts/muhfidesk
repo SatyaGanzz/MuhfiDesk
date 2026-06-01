@@ -1,0 +1,110 @@
+#!/bin/bash
+
+# MuhfiDesk CLI Tool
+# Command line interface for managing the MuhfiDesk installation
+
+INSTALL_DIR="/opt/muhfidesk"
+SERVICE_NAME="muhfidesk.service"
+
+function check_root() {
+    if [ "$EUID" -ne 0 ]; then
+        echo "❌ Please run this command as root (e.g., sudo muhfidesk $1)"
+        exit 1
+    fi
+}
+
+function show_help() {
+    echo "MuhfiDesk CLI"
+    echo "Usage: muhfidesk [command]"
+    echo ""
+    echo "Commands:"
+    echo "  start      - Start the MuhfiDesk server"
+    echo "  stop       - Stop the MuhfiDesk server"
+    echo "  restart    - Restart the MuhfiDesk server"
+    echo "  status     - Show the status of the server"
+    echo "  update     - Update MuhfiDesk to the latest version"
+    echo "  uninstall  - Completely remove MuhfiDesk and all its data"
+    echo "  help       - Show this help message"
+}
+
+case "$1" in
+    start)
+        check_root "start"
+        if command -v systemctl >/dev/null 2>&1 && pidof systemd >/dev/null 2>&1; then
+            systemctl start $SERVICE_NAME
+            echo "✅ MuhfiDesk started."
+        else
+            echo "⚠️ Systemd is not running. Start manually:"
+            echo "cd $INSTALL_DIR && sudo .venv/bin/python app.py"
+        fi
+        ;;
+    stop)
+        check_root "stop"
+        if command -v systemctl >/dev/null 2>&1 && pidof systemd >/dev/null 2>&1; then
+            systemctl stop $SERVICE_NAME
+            echo "✅ MuhfiDesk stopped."
+        else
+            echo "⚠️ Systemd is not running. You must kill the python process manually."
+        fi
+        ;;
+    restart)
+        check_root "restart"
+        if command -v systemctl >/dev/null 2>&1 && pidof systemd >/dev/null 2>&1; then
+            systemctl restart $SERVICE_NAME
+            echo "✅ MuhfiDesk restarted."
+        else
+            echo "⚠️ Systemd is not running."
+        fi
+        ;;
+    status)
+        if command -v systemctl >/dev/null 2>&1 && pidof systemd >/dev/null 2>&1; then
+            systemctl status $SERVICE_NAME
+        else
+            echo "⚠️ Systemd is not running. Checking processes instead:"
+            ps aux | grep "app.py" | grep -v grep
+        fi
+        ;;
+    update)
+        check_root "update"
+        echo "🔄 Updating MuhfiDesk..."
+        if [ -d "$INSTALL_DIR" ]; then
+            cd $INSTALL_DIR
+            git pull origin main
+            echo "📚 Installing any new dependencies..."
+            source .venv/bin/activate
+            pip install -r requirements.txt
+            if command -v systemctl >/dev/null 2>&1 && pidof systemd >/dev/null 2>&1; then
+                systemctl restart $SERVICE_NAME
+            fi
+            echo "✅ Update complete!"
+        else
+            echo "❌ MuhfiDesk is not installed at $INSTALL_DIR"
+        fi
+        ;;
+    uninstall)
+        check_root "uninstall"
+        echo "⚠️ WARNING: This will completely remove MuhfiDesk and ALL its data!"
+        read -p "Are you sure you want to proceed? (y/N) " -n 1 -r
+        echo ""
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            echo "🛑 Stopping services..."
+            if command -v systemctl >/dev/null 2>&1 && pidof systemd >/dev/null 2>&1; then
+                systemctl stop $SERVICE_NAME || true
+                systemctl disable $SERVICE_NAME || true
+                rm -f /etc/systemd/system/$SERVICE_NAME
+                systemctl daemon-reload
+            fi
+            
+            echo "🗑️ Deleting files..."
+            rm -rf $INSTALL_DIR
+            rm -f /usr/local/bin/muhfidesk
+            
+            echo "✅ MuhfiDesk has been uninstalled successfully. Goodbye!"
+        else
+            echo "❌ Uninstallation aborted."
+        fi
+        ;;
+    help|*)
+        show_help
+        ;;
+esac

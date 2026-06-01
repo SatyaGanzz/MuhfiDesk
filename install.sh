@@ -77,7 +77,15 @@ Environment="FLASK_ENV=production"
 WantedBy=multi-user.target
 EOF
 
-# 7. Enable and start the service
+# 7. Install CLI Tool
+echo "🛠️ Installing CLI tool..."
+if [ -f "$INSTALL_DIR/scripts/muhfidesk" ]; then
+    cp $INSTALL_DIR/scripts/muhfidesk /usr/local/bin/muhfidesk
+    chmod +x /usr/local/bin/muhfidesk
+    echo "✅ CLI command 'muhfidesk' installed."
+fi
+
+# 8. Enable and start the service
 echo "🔄 Starting MuhfiDesk service..."
 if command -v systemctl >/dev/null 2>&1 && pidof systemd >/dev/null 2>&1; then
     systemctl daemon-reload
