@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadDrives();
     }
     buildSidebarTree();
+    setupDragAndDrop();
 
     // Close context menu on click outside
     document.addEventListener('click', (e) => {
@@ -646,4 +647,85 @@ function downloadSelected() {
 
     // Open download in new tab
     window.open('/api/files/download?path=' + encodeURIComponent(selectedItem.path), '_blank');
+}
+
+function toggleLocationMenu(event) {
+    const menu = document.getElementById('loc-dropdown');
+    if (menu) menu.classList.toggle('hidden');
+}
+
+
+
+
+// --- DRAG AND DROP UPLOAD ---
+function setupDragAndDrop() {
+    const overlay = document.getElementById('drop-overlay');
+    if (!overlay) return;
+    
+    let dragCounter = 0;
+
+    document.addEventListener('dragenter', (e) => {
+        e.preventDefault();
+        dragCounter++;
+        if (viewMode === 'files') {
+            overlay.classList.add('active');
+        }
+    });
+
+    document.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dragCounter--;
+        if (dragCounter === 0) {
+            overlay.classList.remove('active');
+        }
+    });
+
+    document.addEventListener('dragover', (e) => {
+        e.preventDefault();
+    });
+
+    document.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dragCounter = 0;
+        overlay.classList.remove('active');
+
+        if (viewMode !== 'files') {
+            alert('Please open a folder first before uploading.');
+            return;
+        }
+        
+
+
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            uploadFiles(files);
+        }
+    });
+}
+
+function uploadFiles(files) {
+    const formData = new FormData();
+    formData.append('path', currentPath);
+    for (let i = 0; i < files.length; i++) {
+        formData.append('file', files[i]);
+    }
+
+    document.getElementById('status-text').textContent = `Uploading ${files.length} file(s)...`;
+
+    fetch('/api/files/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) {
+            alert('Upload failed: ' + data.error);
+        }
+        loadFiles(currentPath);
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Upload error');
+        loadFiles(currentPath);
+    });
 }

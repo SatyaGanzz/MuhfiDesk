@@ -5,11 +5,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>App Store - MuhfiDesk</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=5">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <script>
         window.userRole = "{{ session.get('role', 'readonly') }}";
     </script>
@@ -34,23 +36,49 @@
             gap: 1rem;
             margin-bottom: 2rem;
             flex-wrap: wrap;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--bg-base, #0d1117);
+            padding: 1rem 0;
+            margin-top: -1rem; /* counteract container padding for seamless stick */
         }
 
         .categories {
             display: flex;
             gap: 0.5rem;
-            overflow-x: auto;
-            padding-bottom: 0.5rem;
+            flex-direction: column;
             flex: 1;
             margin-left: 1rem;
-            scrollbar-width: none;
-            /* Firefox */
-            -ms-overflow-style: none;
-            /* IE and Edge */
+            position: relative;
         }
 
-        .categories::-webkit-scrollbar {
-            display: none;
+        .category-selector {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            outline: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            min-width: 200px;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%238b949e' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            padding-right: 2.5rem;
+        }
+
+        .category-selector:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .category-selector option {
+            background: #161b22;
+            color: white;
+            padding: 0.5rem;
         }
 
         .category-pill {
@@ -63,6 +91,7 @@
             font-size: 0.9rem;
             transition: all 0.2s;
             color: #8b949e;
+            display: none;
         }
 
         .category-pill:hover,
@@ -533,6 +562,99 @@
         .custom-row-item:hover {
             border-color: rgba(255, 255, 255, 0.1);
         }
+
+        /* Log Panel */
+        .log-panel {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            width: 400px;
+            max-height: 500px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .log-panel.active {
+            display: flex;
+        }
+
+        .log-header {
+            padding: 1rem;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(88, 166, 255, 0.1);
+        }
+
+        .log-header h3 {
+            margin: 0;
+            font-size: 1rem;
+            color: #58a6ff;
+        }
+
+        .log-body {
+            padding: 1rem;
+            overflow-y: auto;
+            max-height: 400px;
+            flex: 1;
+        }
+
+        .log-item {
+            padding: 0.8rem;
+            margin-bottom: 0.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 3px solid #58a6ff;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            animation: slideInRight 0.3s ease;
+        }
+
+        .log-item.success {
+            border-left-color: #3fb950;
+        }
+
+        .log-item.error {
+            border-left-color: #f85149;
+        }
+
+        .log-item.downloading {
+            border-left-color: #f0883e;
+        }
+
+        .log-item .log-time {
+            font-size: 0.7rem;
+            color: #8b949e;
+            margin-bottom: 0.3rem;
+        }
+
+        .log-item .log-message {
+            color: #c9d1d9;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .log-empty {
+            text-align: center;
+            color: #8b949e;
+            padding: 2rem;
+            font-style: italic;
+        }
     </style>
 </head>
 
@@ -545,13 +667,18 @@
                 onclick="window.location.href='/dashboard'">
                 <i class="fa-solid fa-arrow-left"></i> Dashboard
             </button>
-            <h2 style="margin:0 0 0 1rem; font-weight:500">
-                <i class="fa-solid fa-store" style="color:#f5576c"></i> App Store
-            </h2>
+
+            <button class="btn" id="log-btn" style="background:rgba(88,166,255,0.15); width:auto; color:#58a6ff; position:relative; border:1px solid rgba(88,166,255,0.3)"
+                onclick="toggleLogPanel()">
+                <i class="fa-solid fa-list"></i> Log
+                <span id="log-badge" style="display:none; position:absolute; top:-5px; right:-5px; background:#f85149; color:white; border-radius:50%; width:18px; height:18px; font-size:0.7rem; display:flex; align-items:center; justify-content:center;">0</span>
+            </button>
 
             <div class="categories" id="categories">
-                <div class="category-pill active" onclick="filterApps('All')">All Apps</div>
-                <!-- Categories injected here -->
+                <select id="category-dropdown" class="category-selector" onchange="filterCategory(this.value, null)">
+                    <option value="All">📚 All Apps</option>
+                    <!-- Categories injected here -->
+                </select>
             </div>
 
             <div style="margin-left:auto; display:flex; gap:1rem; align-items:center; flex-wrap:wrap">
@@ -567,6 +694,10 @@
                     <option value="not_installed">Belum Terinstall</option>
                 </select>
 
+                <button class="btn" style="background:#1f6feb; width:auto; color:white"
+                    onclick="openAddSourceModal()">
+                    <i class="fa-solid fa-cloud-arrow-down"></i> Add Source
+                </button>
                 <button class="btn" style="background:#238636; width:auto; color:white"
                     onclick="openCustomInstallModal()">
                     <i class="fa-solid fa-plus"></i> Custom App
@@ -593,7 +724,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <div style="display:flex; align-items:center; gap:1rem">
-                    <img id="modal-icon" src="" style="width:40px; height:40px; border-radius:8px">
+                    <img id="modal-icon" src="" style="width:40px; height:40px; border-radius:8px" onerror="this.src='/static/favicon.svg'">
                     <div>
                         <h3 style="margin:0">Install <span id="modal-app-name"></span></h3>
                         <div id="modal-app-image" style="font-size:0.8rem; color:#8b949e; font-family:monospace"></div>
@@ -634,6 +765,17 @@
         style="position:fixed; bottom:20px; right:20px; z-index:2000; display:flex; flex-direction:column; gap:10px">
     </div>
 
+    <!-- Log Panel -->
+    <div id="log-panel" class="log-panel">
+        <div class="log-header">
+            <h3><i class="fa-solid fa-list"></i> Installation Log</h3>
+            <button onclick="toggleLogPanel()" style="background:none; border:none; color:#8b949e; cursor:pointer; font-size:1.2rem">&times;</button>
+        </div>
+        <div class="log-body" id="log-body">
+            <div class="log-empty">No installation activity yet</div>
+        </div>
+    </div>
+
     <script>
         window.userRole = "{{ session.get('role', 'readonly') }}"; // Injected by Flask (Session)
 
@@ -641,6 +783,25 @@
         let currentApp = null;
         let installedApps = {}; // Map: id -> { running: bool, ports: [] }
         let currentCategory = 'All';
+        let logItems = [];
+        
+        // Initialize Socket.IO for real-time installation logs
+        const socket = io();
+
+        socket.on('install_log', function (data) {
+            addLog(data.message, data.type, data.app_id);
+        });
+
+        socket.on('install_complete', function (data) {
+            if (data.status === 'success') {
+                showToast(`${data.app_id} installed successfully!`, 'success');
+                setTimeout(() => {
+                    loadInstalledApps().then(applyFilters);
+                }, 1500);
+            } else {
+                showToast(`Installation failed: ${data.error || 'Unknown error'}`, 'error');
+            }
+        });
 
         document.addEventListener('DOMContentLoaded', () => {
             loadInstalledApps().then(loadApps);
@@ -651,6 +812,47 @@
                 if (customBtn) customBtn.style.display = 'none';
             }
         });
+
+        function toggleLogPanel() {
+            const panel = document.getElementById('log-panel');
+            panel.classList.toggle('active');
+        }
+
+        function addLog(message, type = 'info', appName = '') {
+            const logBody = document.getElementById('log-body');
+            const empty = logBody.querySelector('.log-empty');
+            if (empty) empty.remove();
+
+            const time = new Date().toLocaleTimeString('id-ID');
+            const logItem = document.createElement('div');
+            logItem.className = `log-item ${type}`;
+            logItem.innerHTML = `
+                <div class="log-time">${time}</div>
+                <div class="log-message"><strong>${appName}</strong> ${message}</div>
+            `;
+            
+            logBody.insertBefore(logItem, logBody.firstChild);
+            logItems.push({ time, message, type, appName });
+
+            // Update badge
+            const badge = document.getElementById('log-badge');
+            badge.textContent = logItems.length;
+            badge.style.display = 'flex';
+
+            // Auto remove after 10 seconds for success
+            if (type === 'success') {
+                setTimeout(() => {
+                    logItem.style.opacity = '0';
+                    logItem.style.transform = 'translateX(100%)';
+                    setTimeout(() => logItem.remove(), 300);
+                }, 10000);
+            }
+
+            // Keep max 50 logs
+            if (logBody.children.length > 50) {
+                logBody.lastChild.remove();
+            }
+        }
 
         function showToast(msg, type = 'success') {
             const container = document.getElementById('toast-container');
@@ -704,18 +906,28 @@
 
         function renderCategories() {
             const categories = ['All', ...new Set(allApps.map(a => a.category))];
-            const container = document.getElementById('categories');
-            container.innerHTML = categories.map(cat => `
-                <div class="category-pill ${cat === currentCategory ? 'active' : ''}" onclick="filterCategory('${cat}', this)">
-                    ${cat}
-                </div>
-            `).join('');
+            const dropdown = document.getElementById('category-dropdown');
+            
+            // Clear existing options (keep the first one)
+            while (dropdown.options.length > 1) {
+                dropdown.remove(1);
+            }
+            
+            // Add categories as options
+            categories.slice(1).forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                dropdown.appendChild(option);
+            });
         }
 
         function filterCategory(cat, el) {
             currentCategory = cat;
-            document.querySelectorAll('.category-pill').forEach(p => p.classList.remove('active'));
-            if (el) el.classList.add('active');
+            const dropdown = document.getElementById('category-dropdown');
+            if (dropdown) {
+                dropdown.value = cat;
+            }
             applyFilters();
         }
 
@@ -767,12 +979,18 @@
                     }
                 }
 
+                let healthBadge = '';
+                if (isInstalled && isRunning && info.health && info.health !== 'unknown') {
+                    let hColor = info.health === 'healthy' ? '#3fb950' : (info.health === 'unhealthy' ? '#f85149' : '#d29922');
+                    healthBadge = `<div class="status-badge" style="background:rgba(0,0,0,0.5); color:${hColor}; top: 35px;"><i class="fa-solid fa-heart-pulse"></i> ${info.health}</div>`;
+                }
+
                 return `
                 <div class="app-card" id="card-${app.id}">
                     ${isInstalled ? `<div class="status-badge ${isRunning ? 'running' : 'stopped'}"><i class="fa-solid fa-circle" style="font-size:8px"></i> ${isRunning ? 'Running' : 'Stopped'}</div>` : ''}
-                    
+                    ${healthBadge}
                     <div class="app-header">
-                        <img src="${app.icon}" class="app-icon" onerror="this.src='/static/icon.png'">
+                        <img src="${app.icon || '/static/favicon.svg'}" class="app-icon" onerror="this.src='/static/favicon.svg'">
                         <div class="app-info">
                             <div class="app-name">${app.name}</div>
                             <div class="app-cat">${app.category}</div>
@@ -824,9 +1042,23 @@
             }
         }
 
+        let manageAppId = null;
         function manageApp(appId) {
-            if (confirm(`Uninstall ${appId}? Data volume akan tetap tersimpan.`)) {
-                performAction(appId, 'uninstall');
+            manageAppId = appId;
+            document.getElementById('manage-app-name').textContent = appId;
+            document.getElementById('manage-modal').style.display = 'flex';
+        }
+        function closeManageModal() {
+            document.getElementById('manage-modal').style.display = 'none';
+        }
+        function updateAppPort() {
+            closeManageModal();
+            openInstallModal(manageAppId); 
+        }
+        function uninstallApp() {
+            closeManageModal();
+            if (confirm(`Yakin ingin meng-uninstall ${manageAppId}? Data volume akan tetap tersimpan.`)) {
+                performAction(manageAppId, 'uninstall');
             }
         }
 
@@ -863,7 +1095,7 @@
 
             document.getElementById('modal-app-name').textContent = currentApp.name;
             document.getElementById('modal-app-image').textContent = currentApp.image;
-            document.getElementById('modal-icon').src = currentApp.icon;
+            document.getElementById('modal-icon').src = currentApp.icon || '/static/favicon.svg';
 
             // Standard Install View
             document.getElementById('modal-body').innerHTML = `
@@ -882,11 +1114,17 @@
             `;
 
             // Build Configs
-            const portsHtml = (currentApp.ports || []).map((p, i) => `
+            const portsHtml = (currentApp.ports || []).map((p, i) => {
+                let hostPort = p.host;
+                if (installedApps[appId] && installedApps[appId].ports) {
+                     const runningPort = installedApps[appId].ports.find(rp => rp.container === String(p.container));
+                     if (runningPort && runningPort.host) hostPort = runningPort.host;
+                }
+                return `
                 <div class="form-row">
                      <div class="form-control">
                         <label>Host Port</label>
-                        <input type="number" id="port-host-${i}" value="${p.host}" class="install-config" data-config="port" data-idx="${i}" data-key="host">
+                        <input type="number" id="port-host-${i}" value="${hostPort}" class="install-config" data-config="port" data-idx="${i}" data-key="host">
                         <div class="desc">Port di MuhfiDesk</div>
                     </div>
                     <div class="form-control">
@@ -896,7 +1134,8 @@
                         <input type="hidden" id="port-proto-${i}" value="${p.protocol}">
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
             document.getElementById('config-ports').innerHTML = portsHtml || '<div style="color:#8b949e; font-style:italic">Tidak ada port yang perlu di-expose</div>';
 
             const volHtml = (currentApp.volumes || []).map((v, i) => `
@@ -927,70 +1166,122 @@
 
             document.getElementById('modal-app-name').textContent = "Install Custom App";
             document.getElementById('modal-app-image').textContent = "Manual Configuration";
-            document.getElementById('modal-icon').src = "/static/icon.png";
+            document.getElementById('modal-icon').src = "/static/favicon.svg";
 
             // Build Dynamic Form - Modern Layout
             document.getElementById('modal-body').innerHTML = `
-                 <!-- Basic Info: Grid 2 Column -->
-                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem; margin-bottom:1.5rem">
-                    <div class="form-control">
-                        <label>App Name <span style="color:#f85149">*</span></label>
-                        <input type="text" id="custom-app-name" placeholder="e.g. My Service" required>
+                 <!-- Tab Switcher -->
+                 <div style="display:flex; gap:0.5rem; margin-bottom:1.5rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.5rem">
+                    <button class="tab-btn active" onclick="switchCustomTab('manual')" id="tab-manual" style="background:none; border:none; color:#58a6ff; padding:0.5rem 1rem; cursor:pointer; border-bottom:2px solid #58a6ff; font-weight:500">
+                        <i class="fa-solid fa-sliders"></i> Manual Config
+                    </button>
+                    <button class="tab-btn" onclick="switchCustomTab('compose')" id="tab-compose" style="background:none; border:none; color:#8b949e; padding:0.5rem 1rem; cursor:pointer; border-bottom:2px solid transparent; font-weight:500">
+                        <i class="fa-brands fa-docker"></i> Docker Compose
+                    </button>
+                 </div>
+
+                 <!-- Manual Config Tab -->
+                 <div id="manual-tab-content">
+                     <!-- Basic Info: Grid 2 Column -->
+                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem; margin-bottom:1.5rem">
+                        <div class="form-control">
+                            <label>App Name <span style="color:#f85149">*</span></label>
+                            <input type="text" id="custom-app-name" placeholder="e.g. My Service" required>
+                        </div>
+                        <div class="form-control">
+                            <label>Docker Image <span style="color:#f85149">*</span></label>
+                            <input type="text" id="custom-app-image" placeholder="e.g. nginx:latest" required>
+                        </div>
+                     </div>
+
+                     <!-- Network Mode: Full Width -->
+                     <div class="form-control" style="margin-bottom:1rem">
+                        <label>Network Mode</label>
+                        <div class="select-wrapper" style="position:relative">
+                            <select id="custom-net-mode" style="width:100%; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:white; padding:0.7rem; border-radius:8px; appearance:none; font-family:inherit">
+                                <option value="bridge">Bridge (Default - Recommended)</option>
+                                <option value="host">Host (Direct hardware access)</option>
+                                <option value="none">None</option>
+                            </select>
+                            <i class="fa-solid fa-chevron-down" style="position:absolute; right:1rem; top:50%; transform:translateY(-50%); color:#8b949e; pointer-events:none"></i>
+                        </div>
+                     </div>
+                     
+                     <!-- Resource Limits -->
+                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:2rem">
+                         <div class="form-control">
+                            <label>CPU Limit (Cores, e.g. 0.5)</label>
+                            <input type="text" id="custom-cpu-limit" placeholder="Leave empty for unlimited" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:white; padding:0.7rem; border-radius:8px; width:100%">
+                         </div>
+                         <div class="form-control">
+                            <label>Memory Limit (e.g. 512M, 1G)</label>
+                            <input type="text" id="custom-mem-limit" placeholder="Leave empty for unlimited" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:white; padding:0.7rem; border-radius:8px; width:100%">
+                         </div>
+                     </div>
+
+                     <!-- Section: Ports -->
+                     <div class="config-section-custom">
+                        <div class="section-header-custom">
+                            <div class="title"><i class="fa-solid fa-network-wired"></i> Ports</div>
+                            <button class="btn-sm-add" onclick="addCustomPort()"><i class="fa-solid fa-plus"></i> Add Port</button>
+                        </div>
+                        <div class="section-hint">Petakan port container ke host agar bisa diakses.</div>
+                        <div id="custom-ports-container" class="items-container">
+                            <div class="empty-state">Tidak ada port ditambahkan</div>
+                        </div>
                     </div>
-                    <div class="form-control">
-                        <label>Docker Image <span style="color:#f85149">*</span></label>
-                        <input type="text" id="custom-app-image" placeholder="e.g. nginx:latest" required>
+
+                    <!-- Section: Volumes -->
+                    <div class="config-section-custom">
+                        <div class="section-header-custom">
+                            <div class="title"><i class="fa-solid fa-folder-open"></i> Volumes</div>
+                            <button class="btn-sm-add" onclick="addCustomVol()"><i class="fa-solid fa-plus"></i> Add Volume</button>
+                        </div>
+                        <div class="section-hint">Persist data container ke penyimpanan host.</div>
+                        <div id="custom-vols-container" class="items-container">
+                            <div class="empty-state">Tidak ada volume ditambahkan</div>
+                        </div>
+                    </div>
+
+                    <!-- Section: Environment -->
+                    <div class="config-section-custom">
+                        <div class="section-header-custom">
+                            <div class="title"><i class="fa-solid fa-list"></i> Environment Variables</div>
+                            <button class="btn-sm-add" onclick="addCustomEnv()"><i class="fa-solid fa-plus"></i> Add Variable</button>
+                        </div>
+                        <div class="section-hint">Konfigurasi variabel lingkungan (e.g. TZ, PUID).</div>
+                        <div id="custom-env-container" class="items-container">
+                             <div class="empty-state">Tidak ada environment var ditambahkan</div>
+                        </div>
                     </div>
                  </div>
 
-                 <!-- Network Mode: Full Width -->
-                 <div class="form-control" style="margin-bottom:2rem">
-                    <label>Network Mode</label>
-                    <div class="select-wrapper" style="position:relative">
-                        <select id="custom-net-mode" style="width:100%; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:white; padding:0.7rem; border-radius:8px; appearance:none; font-family:inherit">
-                            <option value="bridge">Bridge (Default - Recommended)</option>
-                            <option value="host">Host (Direct hardware access)</option>
-                            <option value="none">None</option>
-                        </select>
-                        <i class="fa-solid fa-chevron-down" style="position:absolute; right:1rem; top:50%; transform:translateY(-50%); color:#8b949e; pointer-events:none"></i>
+                 <!-- Docker Compose Tab -->
+                 <div id="compose-tab-content" style="display:none">
+                    <div class="form-control" style="margin-bottom:1rem">
+                        <label>App / Stack Name <span style="color:#f85149">*</span></label>
+                        <input type="text" id="compose-app-name" placeholder="e.g. mystack" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:white; padding:0.7rem; border-radius:8px; width:100%">
                     </div>
+                    <div class="form-control">
+                        <label>Paste Docker Compose YAML <span style="color:#f85149">*</span></label>
+                        <div style="font-size:0.75rem; color:#8b949e; margin-bottom:0.5rem">
+                            Paste your docker-compose.yml content here. We'll parse it automatically.
+                        </div>
+                        <textarea id="compose-yaml" rows="15" placeholder="version: '3'
+services:
+  myapp:
+    image: nginx:latest
+    ports:
+      - '8080:80'
+    volumes:
+      - ./data:/usr/share/nginx/html
+    environment:
+      - TZ=Asia/Jakarta" style="width:100%; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:white; padding:0.8rem; border-radius:6px; font-family:monospace; font-size:0.85rem; resize:vertical"></textarea>
+                    </div>
+                    <button class="btn" style="background:#58a6ff; color:white; width:100%; margin-top:1rem" onclick="parseDockerCompose()">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Parse & Auto-Fill
+                    </button>
                  </div>
-
-                 <!-- Section: Ports -->
-                 <div class="config-section-custom">
-                    <div class="section-header-custom">
-                        <div class="title"><i class="fa-solid fa-network-wired"></i> Ports</div>
-                        <button class="btn-sm-add" onclick="addCustomPort()"><i class="fa-solid fa-plus"></i> Add Port</button>
-                    </div>
-                    <div class="section-hint">Petakan port container ke host agar bisa diakses.</div>
-                    <div id="custom-ports-container" class="items-container">
-                        <div class="empty-state">Tidak ada port ditambahkan</div>
-                    </div>
-                </div>
-
-                <!-- Section: Volumes -->
-                <div class="config-section-custom">
-                    <div class="section-header-custom">
-                        <div class="title"><i class="fa-solid fa-folder-open"></i> Volumes</div>
-                        <button class="btn-sm-add" onclick="addCustomVol()"><i class="fa-solid fa-plus"></i> Add Volume</button>
-                    </div>
-                    <div class="section-hint">Persist data container ke penyimpanan host.</div>
-                    <div id="custom-vols-container" class="items-container">
-                        <div class="empty-state">Tidak ada volume ditambahkan</div>
-                    </div>
-                </div>
-
-                <!-- Section: Environment -->
-                <div class="config-section-custom">
-                    <div class="section-header-custom">
-                        <div class="title"><i class="fa-solid fa-list"></i> Environment Variables</div>
-                        <button class="btn-sm-add" onclick="addCustomEnv()"><i class="fa-solid fa-plus"></i> Add Variable</button>
-                    </div>
-                    <div class="section-hint">Konfigurasi variabel lingkungan (e.g. TZ, PUID).</div>
-                    <div id="custom-env-container" class="items-container">
-                         <div class="empty-state">Tidak ada environment var ditambahkan</div>
-                    </div>
-                </div>
             `;
 
             document.getElementById('install-modal').style.display = 'flex';
@@ -1056,6 +1347,123 @@
             document.getElementById('custom-env-container').appendChild(div);
         }
 
+        function switchCustomTab(tab) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.style.color = '#8b949e';
+                btn.style.borderBottomColor = 'transparent';
+            });
+            
+            if (tab === 'manual') {
+                document.getElementById('tab-manual').style.color = '#58a6ff';
+                document.getElementById('tab-manual').style.borderBottomColor = '#58a6ff';
+                document.getElementById('manual-tab-content').style.display = 'block';
+                document.getElementById('compose-tab-content').style.display = 'none';
+            } else {
+                document.getElementById('tab-compose').style.color = '#58a6ff';
+                document.getElementById('tab-compose').style.borderBottomColor = '#58a6ff';
+                document.getElementById('manual-tab-content').style.display = 'none';
+                document.getElementById('compose-tab-content').style.display = 'block';
+            }
+        }
+
+        function parseDockerCompose() {
+            const yaml = document.getElementById('compose-yaml').value.trim();
+            if (!yaml) {
+                alert('Please paste your docker-compose.yml content first');
+                return;
+            }
+
+            try {
+                // Simple YAML parser (basic implementation)
+                const lines = yaml.split('\n');
+                let serviceName = '';
+                let image = '';
+                let ports = [];
+                let volumes = [];
+                let environment = [];
+
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    
+                    // Get service name
+                    if (line.match(/^[a-zA-Z0-9_-]+:$/) && !serviceName && i > 0) {
+                        serviceName = line.replace(':', '');
+                    }
+                    
+                    // Get image
+                    if (line.startsWith('image:')) {
+                        image = line.split('image:')[1].trim();
+                    }
+                    
+                    // Get ports
+                    if (line.startsWith('- ') && lines[i-1] && lines[i-1].trim() === 'ports:') {
+                        const portStr = line.replace('- ', '').replace(/['"]/g, '').trim();
+                        const parts = portStr.split(':');
+                        if (parts.length === 2) {
+                            ports.push({ host: parts[0], container: parts[1] });
+                        }
+                    }
+                    
+                    // Get volumes
+                    if (line.startsWith('- ') && lines[i-1] && lines[i-1].trim() === 'volumes:') {
+                        const volStr = line.replace('- ', '').replace(/['"]/g, '').trim();
+                        const parts = volStr.split(':');
+                        if (parts.length >= 2) {
+                            volumes.push({ bind: parts[0], container: parts[1] });
+                        }
+                    }
+                    
+                    // Get environment
+                    if (line.startsWith('- ') && lines[i-1] && lines[i-1].trim() === 'environment:') {
+                        const envStr = line.replace('- ', '').replace(/['"]/g, '').trim();
+                        const parts = envStr.split('=');
+                        if (parts.length === 2) {
+                            environment.push({ key: parts[0], value: parts[1] });
+                        }
+                    }
+                }
+
+                // Switch to manual tab and fill data
+                switchCustomTab('manual');
+                
+                // Fill basic info
+                if (serviceName) document.getElementById('custom-app-name').value = serviceName;
+                if (image) document.getElementById('custom-app-image').value = image;
+                
+                // Fill ports
+                ports.forEach(p => {
+                    addCustomPort();
+                    const items = document.querySelectorAll('#custom-ports-container .custom-row-item');
+                    const lastItem = items[items.length - 1];
+                    lastItem.querySelector('.custom-port-host').value = p.host;
+                    lastItem.querySelector('.custom-port-container').value = p.container;
+                });
+                
+                // Fill volumes
+                volumes.forEach(v => {
+                    addCustomVol();
+                    const items = document.querySelectorAll('#custom-vols-container .custom-row-item');
+                    const lastItem = items[items.length - 1];
+                    lastItem.querySelector('.custom-vol-host').value = v.bind;
+                    lastItem.querySelector('.custom-vol-container').value = v.container;
+                });
+                
+                // Fill environment
+                environment.forEach(e => {
+                    addCustomEnv();
+                    const items = document.querySelectorAll('#custom-env-container .custom-row-item');
+                    const lastItem = items[items.length - 1];
+                    lastItem.querySelector('.custom-env-key').value = e.key;
+                    lastItem.querySelector('.custom-env-val').value = e.value;
+                });
+
+                showToast('Docker Compose parsed successfully! Review and install.', 'success');
+            } catch (err) {
+                alert('Failed to parse Docker Compose: ' + err.message);
+            }
+        }
+
 
         function closeModal() {
             document.getElementById('install-modal').style.display = 'none';
@@ -1070,31 +1478,47 @@
             let payload = { app_id: appId };
 
             if (appId === 'custom') {
-                // Harvest Custom Data
-                const name = document.getElementById('custom-app-name').value;
-                const image = document.getElementById('custom-app-image').value;
-                const net = document.getElementById('custom-net-mode').value;
+                const isComposeTab = document.getElementById('compose-tab-content').style.display === 'block';
 
-                if (!name || !image) {
-                    alert("Name and Image are required");
-                    return;
-                }
+                if (isComposeTab) {
+                    const stackName = document.getElementById('compose-app-name').value.trim();
+                    const rawCompose = document.getElementById('compose-yaml').value.trim();
+                    if (!stackName || !rawCompose) {
+                        alert("Stack Name and YAML are required");
+                        return;
+                    }
+                    payload.config = {
+                        name: stackName,
+                        raw_compose: rawCompose
+                    };
+                } else {
+                    // Harvest Custom Data
+                    const name = document.getElementById('custom-app-name').value;
+                    const image = document.getElementById('custom-app-image').value;
+                    const net = document.getElementById('custom-net-mode').value;
+                    const cpuLimit = document.getElementById('custom-cpu-limit').value;
+                    const memLimit = document.getElementById('custom-mem-limit').value;
 
-                // Harvest Ports
-                const ports = Array.from(document.querySelectorAll('.custom-row-item')).map(row => {
-                    const h = row.querySelector('.custom-port-host');
-                    const c = row.querySelector('.custom-port-container');
-                    if (h && c && h.value && c.value) return { host: h.value, container: c.value, protocol: 'tcp' };
-                    return null;
-                }).filter(Boolean);
+                    if (!name || !image) {
+                        alert("Name and Image are required");
+                        return;
+                    }
 
-                // Harvest Vols
-                const vols = Array.from(document.querySelectorAll('.custom-row-item')).map(row => {
-                    const h = row.querySelector('.custom-vol-host');
-                    const c = row.querySelector('.custom-vol-container');
-                    if (h && c && h.value && c.value) return { bind: h.value, container: c.value };
-                    return null;
-                }).filter(Boolean);
+                    // Harvest Ports
+                    const ports = Array.from(document.querySelectorAll('.custom-row-item')).map(row => {
+                        const h = row.querySelector('.custom-port-host');
+                        const c = row.querySelector('.custom-port-container');
+                        if (h && c && h.value && c.value) return { host: h.value, container: c.value, protocol: 'tcp' };
+                        return null;
+                    }).filter(Boolean);
+
+                    // Harvest Vols
+                    const vols = Array.from(document.querySelectorAll('.custom-row-item')).map(row => {
+                        const h = row.querySelector('.custom-vol-host');
+                        const c = row.querySelector('.custom-vol-container');
+                        if (h && c && h.value && c.value) return { bind: h.value, container: c.value };
+                        return null;
+                    }).filter(Boolean);
 
                 // Harvest Envs
                 const envs = Array.from(document.querySelectorAll('.custom-row-item')).map(row => {
@@ -1104,7 +1528,7 @@
                     return null;
                 }).filter(Boolean);
 
-                payload.config = { name, image, network_mode: net, ports, volumes: vols, env: envs };
+                payload.config = { name, image, network_mode: net, ports, volumes: vols, env: envs, cpu_limit: cpuLimit, mem_limit: memLimit };
             } else {
                 // Harvest Standard
                 const customPorts = (currentApp.ports || []).map((p, i) => ({
@@ -1129,9 +1553,18 @@
             // Close Config Modal
             closeModal();
 
-            // Open Log Modal
+            // Add log and show panel
+            const appName = currentApp.name || 'Custom App';
+            
+            // Show new Log Modal
             resetLogModal();
+            document.getElementById('log-modal-title').innerHTML = `Installing <strong>${appName}</strong>`;
+            appendLog('Starting installation...', 'info');
+            
+            // Show modal & hide widget
             document.getElementById('log-modal').style.display = 'flex';
+            isMinimized = false;
+            document.getElementById('minimized-install-widget').style.display = 'none';
 
             fetch('/api/store/install', {
                 method: 'POST',
@@ -1141,13 +1574,15 @@
                 .then(r => r.json())
                 .then(data => {
                     if (data.error) {
-                        appendLog("Request Error: " + data.error, 'error');
+                        appendLog('Installation request failed: ' + data.error, 'error');
+                        showToast('Installation failed: ' + data.error, 'error');
                     } else {
-                        appendLog("Request Accepted. Starting process...", 'success');
+                        appendLog('Backend processing started... (Waiting for progress)', 'info');
                     }
                 })
                 .catch(err => {
-                    appendLog("Network Error: " + err.message, 'error');
+                    appendLog('Network error: ' + err.message, 'error');
+                    showToast('Network error', 'error');
                 });
         }
     </script>
@@ -1213,6 +1648,50 @@
         <i class="fa-solid fa-expand" style="color:#8b949e"></i>
     </div>
 
+    <!-- Manage Modal UI -->
+    <div id="manage-modal" class="modal-overlay" style="display:none; z-index:2000">
+        <div class="modal" style="max-width: 400px; width: 90%;">
+            <div class="modal-header">
+                <h3 style="display:flex; align-items:center; gap:0.5rem; margin:0">
+                    <i class="fa-solid fa-gear" style="color:#58a6ff"></i> Manage <span id="manage-app-name" style="color:#fff"></span>
+                </h3>
+                <button onclick="closeManageModal()" class="close-btn" style="background:none; border:none; color:#8b949e; cursor:pointer"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <div class="modal-body" style="display:flex; flex-direction:column; gap:1rem; padding: 1.5rem;">
+                <button class="btn" style="background:rgba(88,166,255,0.15); color:#58a6ff; border:1px solid rgba(88,166,255,0.3); padding:1rem; text-align:left; display:flex; gap:1rem; align-items:center" onclick="updateAppPort()">
+                    <i class="fa-solid fa-network-wired fa-2x"></i>
+                    <div>
+                        <div style="font-weight:bold">Ubah Konfigurasi</div>
+                        <div style="font-size:0.75rem; opacity:0.8; margin-top:4px">Ganti Port, Volume, atau Environment</div>
+                    </div>
+                </button>
+                <button class="btn" style="background:rgba(46,160,67,0.15); color:#3fb950; border:1px solid rgba(46,160,67,0.3); padding:1rem; text-align:left; display:flex; gap:1rem; align-items:center" onclick="triggerUpdateApp()">
+                    <i class="fa-solid fa-arrow-up fa-2x"></i>
+                    <div>
+                        <div style="font-weight:bold">Update Aplikasi</div>
+                        <div style="font-size:0.75rem; opacity:0.8; margin-top:4px">Tarik image terbaru dan muat ulang</div>
+                    </div>
+                </button>
+                <button class="btn" style="background:rgba(255,107,107,0.15); color:#ff6b6b; border:1px solid rgba(255,107,107,0.3); padding:1rem; text-align:left; display:flex; gap:1rem; align-items:center" onclick="uninstallApp()">
+                    <i class="fa-solid fa-trash fa-2x"></i>
+                    <div>
+                        <div style="font-weight:bold">Uninstall Aplikasi</div>
+                        <div style="font-size:0.75rem; opacity:0.8; margin-top:4px">Hapus container (data tetap aman)</div>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+    <script>
+        function triggerUpdateApp() {
+            if (confirm(`Update ${manageAppId} ke versi terbaru (pull image terbaru)?`)) {
+                closeManageModal();
+                performAction(manageAppId, 'update');
+                showToast(`Memulai proses update untuk ${manageAppId}...`, 'info');
+            }
+        }
+    </script>
+
     <!-- Log Modal UI -->
     <div id="log-modal" class="modal-overlay" style="z-index:2100">
         <div class="modal-content"
@@ -1221,7 +1700,7 @@
             <div class="modal-header" style="background:#0d1117; border-bottom:1px solid #30363d; padding:1rem 1.5rem">
                 <h3 style="margin:0; font-size:1rem; display:flex; align-items:center; gap:0.5rem">
                     <i class="fa-solid fa-terminal" style="color:#8b949e"></i>
-                    Installation Logs
+                    <span id="log-modal-title">Installation Logs</span>
                 </h3>
                 <div style="display:flex; gap:0.5rem">
                     <button class="btn" style="padding:0.4rem 0.8rem; background:rgba(255,255,255,0.05); width:auto"
@@ -1254,6 +1733,43 @@
                     onclick="closeLogModal()">Close</button>
                 <button class="btn btn-install" style="width:auto; display:none" id="btn-open-app"
                     onclick="window.location.reload()">Refresh & Open</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Source Modal -->
+    <div id="source-modal" class="modal-overlay" style="display:none; z-index:2000">
+        <div class="modal" style="max-width: 500px; width: 90%;">
+            <div class="modal-header">
+                <h3 style="display:flex; align-items:center; gap:0.5rem; margin:0">
+                    <i class="fa-solid fa-cloud-arrow-down" style="color:#1f6feb"></i> Import CasaOS Source
+                </h3>
+                <button onclick="closeAddSourceModal()" class="close-btn" style="background:none; border:none; color:#8b949e; cursor:pointer"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 1.5rem;">
+                <p style="color:#8b949e; font-size:0.9rem; margin-bottom:1rem">Pilih repositori populer atau masukkan URL custom file ZIP dari CasaOS App Store.</p>
+                
+                <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap">
+                    <button class="btn" style="background:rgba(31,111,235,0.15); color:#58a6ff; border:1px solid rgba(31,111,235,0.3); padding:0.5rem 1rem; border-radius:4px" onclick="document.getElementById('source-url').value='https://github.com/IceWhaleTech/CasaOS-AppStore/archive/refs/heads/main.zip'">
+                        <i class="fa-brands fa-github"></i> CasaOS Official
+                    </button>
+                    <button class="btn" style="background:rgba(31,111,235,0.15); color:#58a6ff; border:1px solid rgba(31,111,235,0.3); padding:0.5rem 1rem; border-radius:4px" onclick="document.getElementById('source-url').value='https://github.com/bigbeartechworld/big-bear-casaos/archive/refs/heads/master.zip'">
+                        <i class="fa-solid fa-bear"></i> BigBearCasaOS
+                    </button>
+                </div>
+
+                <div class="form-control">
+                    <label>Source URL (ZIP)</label>
+                    <input type="text" id="source-url" placeholder="https://github.com/.../master.zip" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.2); border:1px solid #30363d; color:#fff; border-radius:6px">
+                </div>
+                
+                <div id="source-loading" style="display:none; margin-top:1rem; text-align:center; color:#58a6ff">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i> Mengunduh dan memproses ratusan aplikasi... Mohon tunggu.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeAddSourceModal()" style="background:transparent; border:1px solid #30363d; width:auto">Batal</button>
+                <button class="btn" id="btn-submit-source" onclick="submitAddSource()" style="background:#1f6feb; width:auto; color:white">Import Sekarang</button>
             </div>
         </div>
     </div>
@@ -1342,18 +1858,21 @@
             updateMiniWidget(`Installing... ${percent}%`, msg, true);
         }
 
-        function updateMiniWidget(title, status, spinning) {
+        function updateMiniWidget(title, status, showSpinner) {
             document.getElementById('mini-title').innerText = title;
             document.getElementById('mini-status').innerText = status;
-            document.getElementById('mini-spinner').style.display = spinning ? 'block' : 'none';
+            const spinner = document.getElementById('mini-spinner');
+            if (showSpinner) {
+                spinner.style.display = 'block';
+            } else {
+                spinner.style.display = 'none';
+            }
         }
 
         function minimizeLogModal() {
-            isMinimized = true;
             document.getElementById('log-modal').style.display = 'none';
-            // Show Widget
-            const widget = document.getElementById('minimized-install-widget');
-            widget.style.display = 'flex';
+            isMinimized = true;
+            document.getElementById('minimized-install-widget').style.display = 'flex';
         }
 
         function restoreLogModal() {
@@ -1368,6 +1887,46 @@
         function closeLogModal() {
             document.getElementById('log-modal').style.display = 'none';
             document.getElementById('minimized-install-widget').style.display = 'none';
+        }
+        function openAddSourceModal() {
+            document.getElementById('source-url').value = '';
+            document.getElementById('source-loading').style.display = 'none';
+            document.getElementById('btn-submit-source').disabled = false;
+            document.getElementById('source-modal').style.display = 'flex';
+        }
+        
+        function closeAddSourceModal() {
+            document.getElementById('source-modal').style.display = 'none';
+        }
+        
+        function submitAddSource() {
+            const url = document.getElementById('source-url').value.trim();
+            if (!url) return showToast('URL tidak boleh kosong!', 'error');
+            
+            document.getElementById('source-loading').style.display = 'block';
+            document.getElementById('btn-submit-source').disabled = true;
+            
+            fetch('/api/store/add_source', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if(data.error) {
+                    showToast('Gagal: ' + data.error, 'error');
+                } else {
+                    alert(`Berhasil mengimpor ${data.added} aplikasi baru! Halaman akan direfresh.`);
+                    window.location.reload();
+                }
+            })
+            .catch(err => {
+                showToast('Error jaringan: ' + err.message, 'error');
+            })
+            .finally(() => {
+                document.getElementById('source-loading').style.display = 'none';
+                document.getElementById('btn-submit-source').disabled = false;
+            });
         }
     </script>
 

@@ -267,10 +267,18 @@ async function fetchContainers() {
             const mem = isRunning ? `<div class="cstat"><div class="cstat-val">${c.mem_used}MB</div><div class="cstat-label">RAM</div></div>` : '';
             const ports = c.ports && c.ports !== '-' ? c.ports.split(', ').map(p => `<span class="port-tag">${p}</span>`).join(' ') : '';
 
+            let iconName = 'docker';
+            if (c.image) {
+                let imgParts = c.image.split(':')[0].split('/');
+                iconName = imgParts[imgParts.length - 1];
+            }
+            if (iconName === 'portainer-ce' || iconName === 'agent') iconName = 'portainer';
+            const iconUrl = `https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/${iconName}.svg`;
+
             html += `
             <div class="container-card">
-                <div class="container-icon" style="background:${color.bg}; color:${color.icon};">
-                    <i class="fa-brands fa-docker"></i>
+                <div class="container-icon" style="background:${color.bg}; color:${color.icon}; display: flex; justify-content: center; align-items: center; overflow: hidden;">
+                    <img src="${iconUrl}" style="width: 26px; height: 26px; object-fit: contain;" onerror="this.onerror=null; this.outerHTML='<i class=\\'fa-brands fa-docker\\' style=\\'font-size: 1.3rem;\\'></i>';">
                 </div>
                 <div class="container-info">
                     <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap; margin-bottom:4px;">

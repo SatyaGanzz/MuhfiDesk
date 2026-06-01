@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - MuhfiDesk</title>
@@ -104,14 +105,73 @@
         .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(99, 102, 241, 0.6); }
         .btn:hover::before { left: 100%; }
         .btn:disabled { opacity: 0.7; cursor: not-allowed; }
+        
+        /* Entrance Animations */
+        .logo-container {
+            margin-bottom: 16px;
+            opacity: 0;
+            transform: scale(0.3) translateY(20px);
+            transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .logo-container.animate-in {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+        .header-text {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.6s ease;
+        }
+        .header-text.animate-in {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .login-form {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.6s ease;
+        }
+        .login-form.show-form {
+            opacity: 1;
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body>
     <div class="login-container">
         <div class="login-card">
-            <div class="login-header">
-                <h2>MuhfiDesk</h2>
-                <p>Sign in to your account</p>
+            <div class="login-header" style="display: flex; flex-direction: column; align-items: center;">
+                <div class="logo-container" id="animated-logo">
+                    <svg width="64" height="64" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 12px rgba(88, 166, 255, 0.6));">
+                        <rect width="32" height="32" rx="8" fill="url(#paint0_linear)" fill-opacity="0.15"/>
+                        <rect x="0.5" y="0.5" width="31" height="31" rx="7.5" stroke="url(#paint1_linear)" stroke-opacity="0.3"/>
+                        <path d="M8 21V11L16 16.5L24 11V21" stroke="url(#paint2_linear)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M16 24V16.5" stroke="url(#paint3_linear)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="16" cy="7" r="2.5" fill="#58A6FF" filter="drop-shadow(0 0 4px #58A6FF)"/>
+                        <defs>
+                            <linearGradient id="paint0_linear" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#A78BFA"/>
+                                <stop offset="1" stop-color="#58A6FF"/>
+                            </linearGradient>
+                            <linearGradient id="paint1_linear" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#A78BFA"/>
+                                <stop offset="1" stop-color="#58A6FF"/>
+                            </linearGradient>
+                            <linearGradient id="paint2_linear" x1="8" y1="11" x2="24" y2="21" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#fff"/>
+                                <stop offset="1" stop-color="#A78BFA"/>
+                            </linearGradient>
+                            <linearGradient id="paint3_linear" x1="16" y1="16.5" x2="16" y2="24" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#fff"/>
+                                <stop offset="1" stop-color="#A78BFA"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <div class="header-text" id="animated-header">
+                    <h2>MuhfiDesk</h2>
+                    <p>Sign in to your account</p>
+                </div>
             </div>
             
             <form class="login-form" id="loginForm" onsubmit="doLogin(event)">
@@ -181,16 +241,49 @@
         
         // Entrance animation
         document.addEventListener('DOMContentLoaded', () => {
+            const logo = document.getElementById('animated-logo');
+            const headerText = document.getElementById('animated-header');
+            const form = document.getElementById('loginForm');
             const inputs = document.querySelectorAll('input');
-            inputs.forEach((input, index) => {
+            const btn = document.getElementById('login-btn');
+            
+            // Set initial state for inputs and button
+            inputs.forEach(input => {
                 input.style.opacity = '0';
                 input.style.transform = 'translateY(10px)';
-                setTimeout(() => {
-                    input.style.transition = 'all 0.4s ease';
-                    input.style.opacity = '1';
-                    input.style.transform = 'translateY(0)';
-                }, 200 + index * 150);
             });
+            btn.style.opacity = '0';
+            btn.style.transform = 'translateY(10px)';
+
+            // Sequence animations
+            setTimeout(() => {
+                logo.classList.add('animate-in');
+            }, 100);
+
+            setTimeout(() => {
+                headerText.classList.add('animate-in');
+            }, 700);
+
+            setTimeout(() => {
+                form.classList.add('show-form');
+                
+                // Cascade inputs
+                inputs.forEach((input, index) => {
+                    setTimeout(() => {
+                        input.style.transition = 'all 0.4s ease';
+                        input.style.opacity = '1';
+                        input.style.transform = 'translateY(0)';
+                    }, index * 150);
+                });
+                
+                // Animate button last
+                setTimeout(() => {
+                    btn.style.transition = 'all 0.4s ease';
+                    btn.style.opacity = '1';
+                    btn.style.transform = 'translateY(0)';
+                }, inputs.length * 150 + 100);
+                
+            }, 1200);
         });
     </script>
 

@@ -1,11 +1,19 @@
 __pycache__/
 *.pyc
 venv/
+.venv/
 .env
 .idea/
 .vscode/
-data/
+
+# Ignore all user data, logs, and databases
+data/*
+!data/app_catalog.json
+*.db
+*.log
 *.zip
+
+# Installers and Scripts (if you want to ignore any)
 create_package.py
 verify_update_check.py
 
@@ -15,7 +23,7 @@ verify_update_check.py
 admin_id.txt
 orders_db.json
 security_config.json
-*.log
+telegram_config.json
 _seller_tools/
 keygen.py
 admin_keygen_gui.py

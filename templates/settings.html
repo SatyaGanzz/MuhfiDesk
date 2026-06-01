@@ -2,6 +2,7 @@
 <html lang="en">
 
 <head>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
@@ -14,6 +15,7 @@
     <script>
         window.userRole = "{{ session.get('role', 'readonly') }}";
     </script>
+    <script src="{{ url_for('static', filename='i18n.js') }}"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
@@ -508,6 +510,246 @@
             transform: translateY(-3px);
             box-shadow: 0 15px 25px rgba(255, 107, 107, 0.4);
         }
+
+        /* ── Theme Selector Cards ── */
+        .section-label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #8b949e;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .theme-cards-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+        @media (max-width: 700px) {
+            .theme-cards-row { grid-template-columns: 1fr; }
+        }
+
+        .theme-radio-card {
+            border: 2px solid rgba(255,255,255,0.08);
+            border-radius: 14px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.22s ease;
+            background: #0d1117;
+        }
+        .theme-radio-card:hover {
+            border-color: rgba(88,166,255,0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+        .theme-radio-card.active {
+            border-color: #58a6ff;
+            box-shadow: 0 0 0 3px rgba(88,166,255,0.2), 0 8px 24px rgba(0,0,0,0.4);
+        }
+
+        /* Mini dashboard preview inside card */
+        .tcard-preview {
+            height: 80px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            position: relative;
+            overflow: hidden;
+        }
+        .tcard-dark  { background: #0f1117; }
+        .tcard-light { background: #e8edf3; }
+        .tcard-glass {
+            background: linear-gradient(135deg,#1a1a2e,#0f3460,#533483);
+        }
+
+        .tcard-bar {
+            height: 10px;
+            border-radius: 99px;
+            width: 100%;
+        }
+        .tcard-dark  .tcard-bar { background: rgba(88,166,255,0.25); }
+        .tcard-light .tcard-bar { background: rgba(59,130,246,0.25); }
+        .tcard-glass .tcard-bar { background: rgba(255,255,255,0.15); }
+
+        .tcard-widgets {
+            display: flex;
+            gap: 5px;
+            flex: 1;
+        }
+        .tcard-w {
+            flex: 1;
+            border-radius: 6px;
+        }
+        .tcard-dark  .tcard-w { background: rgba(255,255,255,0.06); }
+        .tcard-light .tcard-w { background: rgba(0,0,0,0.07); }
+        .tcard-glass .tcard-w { background: rgba(255,255,255,0.12); backdrop-filter: blur(4px); }
+
+        .tcard-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 0.8rem;
+            font-size: 0.88rem;
+            font-weight: 500;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            color: #e6edf3;
+            background: rgba(0,0,0,0.2);
+        }
+        .tcard-info i { font-size: 0.85rem; color: #58a6ff; }
+        .tcard-check {
+            margin-left: auto;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #58a6ff;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            color: #fff;
+        }
+        .theme-radio-card.active .tcard-check { display: flex; }
+
+        /* ── Background Swatches ── */
+        .bg-section-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #8b949e;
+            margin-bottom: 0.5rem;
+        }
+        .bg-swatches {
+            display: grid;
+            grid-template-columns: repeat(5, max-content);
+            gap: 0.8rem;
+        }
+        .bg-preset {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .bg-preset:hover { transform: scale(1.12); }
+        .bg-preset.active { border-color: #58a6ff; box-shadow: 0 0 0 2px rgba(88,166,255,0.35); }
+
+        /* ── Wallpaper dropzone ── */
+        .wallpaper-dropzone {
+            border: 2px dashed rgba(88,166,255,0.3);
+            border-radius: 12px;
+            padding: 1.4rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.22s ease;
+            background: rgba(88,166,255,0.04);
+            position: relative;
+        }
+        .wallpaper-dropzone:hover,
+        .wallpaper-dropzone.drag-over {
+            border-color: #58a6ff;
+            background: rgba(88,166,255,0.1);
+        }
+        .dropzone-inner i {
+            font-size: 1.8rem;
+            color: #58a6ff;
+            opacity: 0.7;
+            margin-bottom: 0.4rem;
+        }
+        .dropzone-inner p {
+            font-size: 0.85rem;
+            color: #e6edf3;
+            margin-bottom: 0.2rem;
+        }
+        .dropzone-inner span {
+            font-size: 0.72rem;
+            color: #8b949e;
+        }
+        .wallpaper-filename {
+            font-size: 0.8rem;
+            color: #3fb950;
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+        }
+
+        /* ── Background live preview ── */
+        .bg-live-preview {
+            width: 100%;
+            height: 70px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: #0f1117;
+            transition: all 0.35s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .bg-live-preview::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(
+                45deg,
+                rgba(255,255,255,0.03),
+                rgba(255,255,255,0.03) 4px,
+                transparent 4px,
+                transparent 12px
+            );
+        }
+
+        /* ── Server Identity rows ── */
+        .identity-row {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            padding: 0.65rem 1.1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            transition: background 0.15s;
+        }
+        .identity-row:last-child { border-bottom: none; }
+        .identity-row:hover { background: rgba(255,255,255,0.03); }
+        .identity-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+        .identity-label {
+            font-size: 0.78rem;
+            color: #8b949e;
+            width: 110px;
+            flex-shrink: 0;
+        }
+        .identity-value {
+            font-size: 0.88rem;
+            color: #e6edf3;
+            font-weight: 500;
+            word-break: break-all;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .identity-badge {
+            margin-left: auto;
+            font-size: 0.7rem;
+            padding: 0.15rem 0.55rem;
+            border-radius: 99px;
+            background: rgba(167,139,250,0.15);
+            color: #a78bfa;
+            font-weight: 600;
+            white-space: nowrap;
+        }
     </style>
 </head>
 
@@ -573,14 +815,11 @@
                     </div>
                     <div class="form-group"
                         style="margin-top:1rem; border-top:1px solid rgba(255,255,255,0.1); padding-top:1rem">
-                        <label>System Update</label>
-                        <div style="display:flex; gap:1rem; align-items:center">
-                            <button class="btn secondary" onclick="checkUpdate()" id="btn-update-top">
-                                <i class="fa-solid fa-rotate"></i> Check for Updates
-                            </button>
-                            <span id="update-status-top" style="font-size:0.85rem; color:#8b949e">Current: {{
-                                version_info.version if version_info else '1.0.0' }}</span>
-                        </div>
+                        <label>Language</label>
+                        <select id="language" onchange="changeLanguageInstant(this.value)">
+                            <option value="en" selected>English (Default)</option>
+                            <option value="id">Indonesia</option>
+                        </select>
                     </div>
                 </div>
                 <div class="card-footer">
@@ -588,41 +827,181 @@
                 </div>
             </div>
 
-            <!-- Appearance -->
-            <div class="card">
+            <!-- Server Identity -->
+            <div class="card" id="card-server-identity">
                 <div class="card-header">
-                    <i class="fa-solid fa-palette"></i>
-                    <h3>Appearance</h3>
+                    <i class="fa-solid fa-id-card" style="color:#a78bfa"></i>
+                    <h3>Server Identity</h3>
+                    <button class="btn" style="margin-left:auto;padding:0.25rem 0.6rem;font-size:0.75rem" onclick="refreshIdentity()">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
                 </div>
-                <div class="card-body">
-                    <div class="form-group">
-                        <label>Accent Color</label>
-                        <div class="color-options" id="accent-colors">
-                            <div class="color-option blue" data-color="blue" onclick="selectColor('blue')"></div>
-                            <div class="color-option green" data-color="green" onclick="selectColor('green')"></div>
-                            <div class="color-option orange" data-color="orange" onclick="selectColor('orange')"></div>
-                            <div class="color-option red" data-color="red" onclick="selectColor('red')"></div>
-                            <div class="color-option purple" data-color="purple" onclick="selectColor('purple')"></div>
-                            <div class="color-option teal" data-color="teal" onclick="selectColor('teal')"></div>
+                <div class="card-body" style="padding:0">
+                    <div id="identity-list" style="display:flex;flex-direction:column">
+                        <!-- rows injected by JS -->
+                        <div style="text-align:center;padding:2rem;color:#8b949e;font-size:0.85rem">
+                            <i class="fa-solid fa-spinner fa-spin"></i> Loading...
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label>Layout Density</label>
-                        <div class="radio-cards">
-                            <div class="radio-card" id="density-comfortable" onclick="selectDensity('comfortable')">
-                                <i class="fa-solid fa-expand"></i>
-                                <span>Comfortable</span>
+                </div>
+            </div>
+
+            <!-- Appearance & Theme -->
+            <div class="card full-width" id="card-appearance">
+                <div class="card-header">
+                    <i class="fa-solid fa-palette"></i>
+                    <h3>Appearance &amp; Tema</h3>
+                </div>
+                <div class="card-body">
+
+                    <!-- ── THEME SELECTOR ── -->
+                    <div style="margin-bottom:2rem">
+                        <div class="section-label">
+                            <i class="fa-solid fa-swatchbook"></i> Pilih Tema
+                        </div>
+                        <div class="theme-cards-row">
+                            <!-- Dark -->
+                            <div class="theme-radio-card" data-theme="dark" id="tcard-dark" onclick="selectThemeCard('dark')">
+                                <div class="tcard-preview tcard-dark">
+                                    <div class="tcard-bar"></div>
+                                    <div class="tcard-widgets">
+                                        <div class="tcard-w"></div>
+                                        <div class="tcard-w"></div>
+                                        <div class="tcard-w"></div>
+                                    </div>
+                                </div>
+                                <div class="tcard-info">
+                                    <i class="fa-solid fa-moon"></i>
+                                    <span>Mode Gelap</span>
+                                    <div class="tcard-check"><i class="fa-solid fa-check"></i></div>
+                                </div>
                             </div>
-                            <div class="radio-card" id="density-compact" onclick="selectDensity('compact')">
-                                <i class="fa-solid fa-compress"></i>
-                                <span>Compact</span>
+
+                            <!-- Light -->
+                            <div class="theme-radio-card" data-theme="light" id="tcard-light" onclick="selectThemeCard('light')">
+                                <div class="tcard-preview tcard-light">
+                                    <div class="tcard-bar"></div>
+                                    <div class="tcard-widgets">
+                                        <div class="tcard-w"></div>
+                                        <div class="tcard-w"></div>
+                                        <div class="tcard-w"></div>
+                                    </div>
+                                </div>
+                                <div class="tcard-info">
+                                    <i class="fa-solid fa-sun"></i>
+                                    <span>Mode Terang</span>
+                                    <div class="tcard-check"><i class="fa-solid fa-check"></i></div>
+                                </div>
+                            </div>
+
+                            <!-- Glassmorphic -->
+                            <div class="theme-radio-card" data-theme="glassmorphic" id="tcard-glassmorphic" onclick="selectThemeCard('glassmorphic')">
+                                <div class="tcard-preview tcard-glass">
+                                    <div class="tcard-bar"></div>
+                                    <div class="tcard-widgets">
+                                        <div class="tcard-w"></div>
+                                        <div class="tcard-w"></div>
+                                        <div class="tcard-w"></div>
+                                    </div>
+                                </div>
+                                <div class="tcard-info">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                    <span>Glassmorphic</span>
+                                    <div class="tcard-check"><i class="fa-solid fa-check"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── DIVIDER ── -->
+                    <hr style="border:none; border-top:1px solid rgba(255,255,255,0.07); margin-bottom:1.5rem">
+
+                    <!-- ── BACKGROUND WALLPAPER ── -->
+                    <div class="section-label" style="margin-bottom:1rem">
+                        <i class="fa-solid fa-image"></i> Background / Wallpaper
+                    </div>
+
+                    <div class="form-row">
+                        <!-- Left: Presets -->
+                        <div class="form-group">
+                            <div class="bg-section-title">Gradients</div>
+                            <div class="bg-swatches">
+                                <div class="bg-preset" data-bg="linear-gradient(135deg,#1a1a2e,#16213e,#0f3460,#533483)" onclick="selectBgPreset(this)" style="background:linear-gradient(135deg,#1a1a2e,#0f3460,#533483)" title="Cosmic (Glass default)"></div>
+                                <div class="bg-preset" data-bg="linear-gradient(135deg,#0f0c29,#302b63,#24243e)" onclick="selectBgPreset(this)" style="background:linear-gradient(135deg,#0f0c29,#302b63,#24243e)" title="Cosmic Violet"></div>
+                                <div class="bg-preset" data-bg="linear-gradient(135deg,#0a1628,#0e2a4a,#1a4a7a)" onclick="selectBgPreset(this)" style="background:linear-gradient(135deg,#0a1628,#0e2a4a,#1a4a7a)" title="Deep Sea"></div>
+                                <div class="bg-preset" data-bg="linear-gradient(135deg,#071a10,#0d3320,#145a32)" onclick="selectBgPreset(this)" style="background:linear-gradient(135deg,#071a10,#0d3320,#145a32)" title="Emerald Forest"></div>
+                                <div class="bg-preset" data-bg="linear-gradient(135deg,#1a0a0e,#3d1020,#6b1c35)" onclick="selectBgPreset(this)" style="background:linear-gradient(135deg,#1a0a0e,#3d1020,#6b1c35)" title="Crimson Dusk"></div>
+                                <div class="bg-preset" data-bg="linear-gradient(135deg,#0a0e1a,#141e3c,#1e2d5a,#2a3f7a)" onclick="selectBgPreset(this)" style="background:linear-gradient(135deg,#0a0e1a,#141e3c,#2a3f7a)" title="Midnight Blue"></div>
+                                <div class="bg-preset" data-bg="linear-gradient(160deg,#0f2027,#203a43,#2c5364)" onclick="selectBgPreset(this)" style="background:linear-gradient(160deg,#0f2027,#203a43,#2c5364)" title="Steel Ocean"></div>
+                                <div class="bg-preset" data-bg="linear-gradient(135deg,#1f1c2c,#928dab)" onclick="selectBgPreset(this)" style="background:linear-gradient(135deg,#1f1c2c,#928dab)" title="Twilight Mist"></div>
+                                <div class="bg-preset" data-bg="linear-gradient(135deg,#141e30,#243b55)" onclick="selectBgPreset(this)" style="background:linear-gradient(135deg,#141e30,#243b55)" title="Royal Night"></div>
+                                <div class="bg-preset" data-bg="linear-gradient(135deg,#3a1c71,#d76d77,#ffaf7b)" onclick="selectBgPreset(this)" style="background:linear-gradient(135deg,#3a1c71,#d76d77,#ffaf7b)" title="Retro Sunrise"></div>
+                                <div class="bg-preset" data-bg="linear-gradient(135deg,#000428,#004e92)" onclick="selectBgPreset(this)" style="background:linear-gradient(135deg,#000428,#004e92)" title="Deep Space"></div>
+                                <div class="bg-preset" data-bg="linear-gradient(135deg,#23074d,#cc5333)" onclick="selectBgPreset(this)" style="background:linear-gradient(135deg,#23074d,#cc5333)" title="Neon Flame"></div>
+                                <div class="bg-preset" data-bg="linear-gradient(135deg,#0b8793,#360033)" onclick="selectBgPreset(this)" style="background:linear-gradient(135deg,#0b8793,#360033)" title="Purple Bliss"></div>
+                                <div class="bg-preset" data-bg="linear-gradient(135deg,#11998e,#38ef7d)" onclick="selectBgPreset(this)" style="background:linear-gradient(135deg,#11998e,#38ef7d)" title="Neon Jungle"></div>
+                                <div class="bg-preset" data-bg="linear-gradient(135deg,#fc4a1a,#f7b733)" onclick="selectBgPreset(this)" style="background:linear-gradient(135deg,#fc4a1a,#f7b733)" title="Solar Flare"></div>
+                                <div class="bg-preset" data-bg="linear-gradient(135deg,#4568dc,#b06ab3)" onclick="selectBgPreset(this)" style="background:linear-gradient(135deg,#4568dc,#b06ab3)" title="Synthwave"></div>
+                                <div class="bg-preset" data-bg="linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)" onclick="selectBgPreset(this)" style="background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)" title="Instagram"></div>
+                                <div class="bg-preset" data-bg="linear-gradient(135deg,#FFD3A5,#FD6585)" onclick="selectBgPreset(this)" style="background:linear-gradient(135deg,#FFD3A5,#FD6585)" title="Peach"></div>
+                                <div class="bg-preset" data-bg="linear-gradient(135deg,#8E0E00,#1F1C18)" onclick="selectBgPreset(this)" style="background:linear-gradient(135deg,#8E0E00,#1F1C18)" title="Netflix"></div>
+                                <div class="bg-preset" data-bg="linear-gradient(135deg,#ff9a9e,#fecfef)" onclick="selectBgPreset(this)" style="background:linear-gradient(135deg,#ff9a9e,#fecfef)" title="Pastel Dream"></div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Custom & Upload -->
+                        <div class="form-group">
+                            <div class="bg-section-title">Custom Color</div>
+                            <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:1rem">
+                                <input type="color" id="bg-color-picker" value="#0f1117"
+                                    style="width:42px;height:38px;border:none;border-radius:8px;cursor:pointer;background:transparent;padding:0"
+                                    oninput="document.getElementById('bg-color-hex').value=this.value">
+                                <input type="text" id="bg-color-hex" placeholder="#0f1117"
+                                    style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#f0f6fc;padding:0.45rem 0.7rem;border-radius:8px;font-size:0.85rem;font-family:monospace;outline:none">
+                                <button class="btn" onclick="applyCustomColor()" style="white-space:nowrap">
+                                    <i class="fa-solid fa-check"></i> Apply
+                                </button>
+                            </div>
+
+                            <div class="bg-section-title">Upload Wallpaper</div>
+                            <!-- Drop zone -->
+                            <div id="wallpaper-dropzone" class="wallpaper-dropzone"
+                                onclick="document.getElementById('bg-file-upload').click()"
+                                ondragover="event.preventDefault(); this.classList.add('drag-over')"
+                                ondragleave="this.classList.remove('drag-over')"
+                                ondrop="handleDropZone(event)">
+                                <input type="file" id="bg-file-upload" accept="image/*" style="display:none"
+                                    onchange="handleSettingsWallpaperUpload(event)">
+                                <div class="dropzone-inner">
+                                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                                    <p>Klik atau drag &amp; drop gambar di sini</p>
+                                    <span>PNG, JPG, WEBP · Max ~2MB</span>
+                                </div>
+                                <div id="wallpaper-name" class="wallpaper-filename" style="display:none"></div>
+                            </div>
+
+                            <div style="display:flex;gap:0.5rem;margin-top:0.8rem;flex-wrap:wrap">
+                                <button class="btn" onclick="document.getElementById('bg-file-upload').click()">
+                                    <i class="fa-solid fa-upload"></i> Upload File
+                                </button>
+                                <button class="btn" onclick="resetBackground()" style="color:#f85149;border-color:rgba(248,81,73,0.3)">
+                                    <i class="fa-solid fa-rotate-left"></i> Reset Default
+                                </button>
+                            </div>
+                            <div class="form-hint" style="margin-top:0.5rem">Gambar dikompres otomatis &amp; disimpan di browser (localStorage).</div>
+
+                            <!-- Live preview -->
+                            <div style="margin-top:1.2rem">
+                                <div class="bg-section-title">Preview</div>
+                                <div id="bg-preview" class="bg-live-preview"></div>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="card-footer">
-                    <button class="btn primary" onclick="saveAppearance()"><i class="fa-solid fa-save"></i>
-                        Save</button>
+                    <button class="btn primary" onclick="saveAppearance()">
+                        <i class="fa-solid fa-save"></i> Save
+                    </button>
                 </div>
             </div>
 
@@ -845,6 +1224,126 @@
                 </div>
             </div>
 
+            <!-- 🤖 Telegram Notification -->
+            <div class="card full-width">
+                <div class="card-header">
+                    <i class="fa-brands fa-telegram" style="color:#29a9eb"></i>
+                    <h3>Telegram Notification</h3>
+                </div>
+                <div class="card-body">
+                    <!-- Enable Toggle -->
+                    <div class="form-group" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:1rem; border-bottom:1px solid rgba(255,255,255,0.1);">
+                        <div>
+                            <div style="font-size:0.95rem; font-weight:600">Enable Notifications</div>
+                            <div style="font-size:0.75rem; color:#8b949e">Kirim monitoring & alert otomatis ke Telegram</div>
+                        </div>
+                        <label style="position:relative; display:inline-block; width:48px; height:26px; cursor:pointer;">
+                            <input type="checkbox" id="tg-enabled" style="opacity:0; width:0; height:0;">
+                            <span style="position:absolute; top:0; left:0; right:0; bottom:0; background:#30363d; border-radius:26px; transition:0.3s;"></span>
+                            <span class="tg-slider-dot" style="position:absolute; top:3px; left:3px; width:20px; height:20px; background:#fff; border-radius:50%; transition:0.3s;"></span>
+                        </label>
+                    </div>
+
+                    <div id="tg-settings-body" style="margin-top:1rem;">
+                        <!-- Bot Credentials -->
+                        <h4 style="font-size:0.9rem; margin-bottom:1rem; color:#8b949e; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.5rem">
+                            <i class="fa-solid fa-key" style="margin-right:0.3rem"></i> Bot Credentials
+                        </h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Bot Token</label>
+                                <input type="password" id="tg-bot-token" placeholder="">
+                                <div class="form-hint">Dapatkan dari <a href="https://t.me/BotFather" target="_blank" style="color:#29a9eb">@BotFather</a> di Telegram</div>
+                            </div>
+                            <div class="form-group">
+                                <label>Chat ID</label>
+                                <input type="text" id="tg-chat-id" placeholder="">
+                                <div class="form-hint">ID grup/user. Gunakan <a href="https://t.me/userinfobot" target="_blank" style="color:#29a9eb">@userinfobot</a></div>
+                            </div>
+                        </div>
+                        <div id="tg-token-status" style="font-size:0.8rem; color:#8b949e; margin-bottom:1rem;"></div>
+
+                        <!-- Report Interval -->
+                        <h4 style="font-size:0.9rem; margin:1.5rem 0 1rem; color:#8b949e; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.5rem">
+                            <i class="fa-solid fa-clock" style="margin-right:0.3rem"></i> Monitoring Report
+                        </h4>
+                        <div class="form-group">
+                            <label>Report Interval (menit)</label>
+                            <div style="display:flex; align-items:center; gap:1rem">
+                                <input type="range" id="tg-interval" min="1" max="60" value="10" style="flex:1; accent-color:#29a9eb">
+                                <span id="tg-interval-val" style="font-weight:600; min-width:50px; text-align:center; background:rgba(41,169,235,0.15); color:#29a9eb; padding:0.3rem 0.7rem; border-radius:6px;">10m</span>
+                            </div>
+                            <div class="form-hint">Laporan sistem lengkap (CPU, RAM, Disk, Network, Docker) dikirim otomatis setiap N menit</div>
+                        </div>
+
+                        <!-- Alert Thresholds -->
+                        <h4 style="font-size:0.9rem; margin:1.5rem 0 1rem; color:#8b949e; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.5rem">
+                            <i class="fa-solid fa-bell" style="margin-right:0.3rem"></i> Smart Alert Thresholds
+                        </h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>CPU Alert Threshold</label>
+                                <div style="display:flex; align-items:center; gap:0.8rem">
+                                    <input type="range" id="tg-cpu-threshold" min="50" max="100" value="90" style="flex:1; accent-color:#f85149">
+                                    <span id="tg-cpu-val" style="font-weight:600; min-width:50px; text-align:center; background:rgba(248,81,73,0.15); color:#f85149; padding:0.3rem 0.7rem; border-radius:6px;">90%</span>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>RAM Alert Threshold</label>
+                                <div style="display:flex; align-items:center; gap:0.8rem">
+                                    <input type="range" id="tg-ram-threshold" min="50" max="100" value="90" style="flex:1; accent-color:#d29922">
+                                    <span id="tg-ram-val" style="font-weight:600; min-width:50px; text-align:center; background:rgba(210,153,34,0.15); color:#d29922; padding:0.3rem 0.7rem; border-radius:6px;">90%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Alert Toggles -->
+                        <h4 style="font-size:0.9rem; margin:1.5rem 0 1rem; color:#8b949e; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.5rem">
+                            <i class="fa-solid fa-shield-halved" style="margin-right:0.3rem"></i> Alert Events
+                        </h4>
+                        <div style="display:flex; flex-direction:column; gap:0.8rem">
+                            <label style="display:flex; align-items:center; gap:0.8rem; cursor:pointer; padding:0.6rem 0.8rem; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid rgba(255,255,255,0.06)">
+                                <input type="checkbox" id="tg-alert-docker" checked style="accent-color:#2496ed; width:16px; height:16px">
+                                <i class="fa-brands fa-docker" style="color:#2496ed; width:20px; text-align:center"></i>
+                                <div>
+                                    <div style="font-size:0.85rem">Docker Container Crash</div>
+                                    <div style="font-size:0.72rem; color:#8b949e">Alert ketika container tiba-tiba mati atau crash</div>
+                                </div>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:0.8rem; cursor:pointer; padding:0.6rem 0.8rem; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid rgba(255,255,255,0.06)">
+                                <input type="checkbox" id="tg-alert-brute" checked style="accent-color:#f85149; width:16px; height:16px">
+                                <i class="fa-solid fa-user-lock" style="color:#f85149; width:20px; text-align:center"></i>
+                                <div>
+                                    <div style="font-size:0.85rem">Brute Force Login</div>
+                                    <div style="font-size:0.72rem; color:#8b949e">Alert ketika ada percobaan login gagal berkali-kali</div>
+                                </div>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:0.8rem; cursor:pointer; padding:0.6rem 0.8rem; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid rgba(255,255,255,0.06)">
+                                <input type="checkbox" id="tg-alert-backup" checked style="accent-color:#3fb950; width:16px; height:16px">
+                                <i class="fa-solid fa-box-archive" style="color:#3fb950; width:20px; text-align:center"></i>
+                                <div>
+                                    <div style="font-size:0.85rem">Backup Events</div>
+                                    <div style="font-size:0.72rem; color:#8b949e">Alert ketika backup berhasil atau gagal</div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div style="display:flex; gap:0.8rem; margin-top:1.5rem; flex-wrap:wrap; padding-top:1rem; border-top:1px solid rgba(255,255,255,0.1)">
+                            <button class="btn" onclick="testTelegram()" id="btn-tg-test" style="background:rgba(41,169,235,0.15); border-color:rgba(41,169,235,0.3); color:#29a9eb">
+                                <i class="fa-solid fa-paper-plane"></i> Kirim Test Message
+                            </button>
+                            <button class="btn" onclick="sendReportNow()" id="btn-tg-report" style="background:rgba(63,185,80,0.15); border-color:rgba(63,185,80,0.3); color:#3fb950">
+                                <i class="fa-solid fa-chart-line"></i> Kirim Report Sekarang
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button class="btn primary" onclick="saveTelegram()" {% if session.get('role') in ['readonly', 'operator'] %}style="display:none"{% endif %}><i class="fa-solid fa-save"></i> Save Telegram Config</button>
+                </div>
+            </div>
+
             <!-- Danger Zone -->
             <div class="card full-width">
                 <div class="card-header" style="border-color: rgba(248,81,73,0.3)">
@@ -920,10 +1419,44 @@
         let selectedColor = 'blue';
         let selectedDensity = 'comfortable';
 
+        // Instant language change function
+        async function changeLanguageInstant(lang) {
+            try {
+                // Get current settings
+                const response = await fetch('/api/settings');
+                const currentSettings = await response.json();
+                
+                // Update language
+                currentSettings.general.language = lang;
+                
+                // Save settings
+                await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(currentSettings)
+                });
+                
+                // Show loading indicator
+                const select = document.getElementById('language');
+                const originalHTML = select.parentElement.innerHTML;
+                select.parentElement.innerHTML = '<div style="text-align:center; color:#58a6ff"><i class="fa-solid fa-spinner fa-spin"></i> Applying language...</div>';
+                
+                // Reload page after short delay
+                setTimeout(() => {
+                    window.location.reload();
+                }, 800);
+            } catch (error) {
+                console.error('Failed to change language:', error);
+                alert('Failed to change language. Please try again.');
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             loadSettings();
             loadServices();
             loadVersion();
+            loadTelegramConfig();
+            initBackgroundUI();
         });
 
         // ===== VERSION & UPDATE CHECKER =====
@@ -1258,6 +1791,9 @@
 
                 const elDate = document.getElementById('date-format');
                 if (elDate) elDate.value = s.general.date_format || 'DD/MM/YYYY';
+
+                const elLang = document.getElementById('language');
+                if (elLang) elLang.value = s.general.language || 'en';
             });
 
             runSafe("Appearance", () => {
@@ -1371,12 +1907,40 @@
             alert('Test connection feature is coming in the next update. Please save the config first.');
         }
 
+        // Instant language change
+        async function changeLanguageInstant(lang) {
+            try {
+                // Get current settings
+                const response = await fetch('/api/settings');
+                const currentSettings = await response.json();
+                
+                // Update language
+                currentSettings.general.language = lang;
+                
+                // Save settings
+                await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(currentSettings)
+                });
+                
+                // Reload page to apply language
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
+            } catch (error) {
+                console.error('Failed to change language:', error);
+                alert('Failed to change language');
+            }
+        }
+
         function saveGeneral() {
             saveSection('general', {
                 server_name: document.getElementById('server-name').value,
                 timezone: document.getElementById('timezone').value,
                 time_format: document.getElementById('time-format').value,
-                date_format: document.getElementById('date-format').value
+                date_format: document.getElementById('date-format').value,
+                language: document.getElementById('language') ? document.getElementById('language').value : 'en'
             });
         }
 
@@ -1386,6 +1950,115 @@
                 density: selectedDensity
             });
         }
+
+        // ===== BACKGROUND / WALLPAPER MANAGEMENT =====
+        function initBackgroundUI() {
+            const savedBg = localStorage.getItem('dashboard_bg') || '#1b203d';
+            updateBgPreview(savedBg);
+            highlightActiveBgPreset(savedBg);
+
+            // Color picker sync
+            const picker = document.getElementById('bg-color-picker');
+            const hex = document.getElementById('bg-color-hex');
+            picker.addEventListener('input', e => {
+                hex.value = e.target.value;
+            });
+            hex.addEventListener('input', e => {
+                let val = e.target.value;
+                if (val.match(/^#[0-9a-fA-F]{6}$/)) {
+                    picker.value = val;
+                }
+            });
+
+            // File upload handler
+            document.getElementById('bg-file-upload').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                const btn = document.getElementById('btn-bg-upload');
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const MAX_W = 1920, MAX_H = 1080;
+                        let w = img.width, h = img.height;
+                        if (w > MAX_W) { h *= MAX_W / w; w = MAX_W; }
+                        if (h > MAX_H) { w *= MAX_H / h; h = MAX_H; }
+                        canvas.width = w; canvas.height = h;
+                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                        try {
+                            setAndSaveTheme(dataUrl);
+                            updateBgPreview(dataUrl);
+                            highlightActiveBgPreset(dataUrl);
+                            btn.innerHTML = '<i class="fa-solid fa-check" style="color:#3fb950"></i> Uploaded!';
+                            showMsg('Background updated!', 'success');
+                        } catch(err) {
+                            showMsg('Image too large for localStorage!', 'error');
+                        }
+                        setTimeout(() => { btn.innerHTML = '<i class="fa-solid fa-upload"></i> Upload Image'; }, 2000);
+                    };
+                    img.src = evt.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function selectBgPreset(el) {
+            const bg = el.getAttribute('data-bg');
+            setAndSaveTheme(bg);
+            updateBgPreview(bg);
+            highlightActiveBgPreset(bg);
+            showMsg('Background updated!', 'success');
+        }
+
+        function applyCustomColor() {
+            const hex = document.getElementById('bg-color-hex').value.trim();
+            const picker = document.getElementById('bg-color-picker').value;
+            const val = hex || picker;
+            if (!val) return;
+            setAndSaveTheme(val);
+            updateBgPreview(val);
+            highlightActiveBgPreset(val);
+            showMsg('Custom background applied!', 'success');
+        }
+
+        function resetBackground() {
+            const defaultBg = '#1b203d';
+            setAndSaveTheme(defaultBg);
+            updateBgPreview(defaultBg);
+            highlightActiveBgPreset(defaultBg);
+            document.getElementById('bg-color-picker').value = defaultBg;
+            document.getElementById('bg-color-hex').value = '';
+            showMsg('Background reset to default', 'success');
+        }
+
+        function updateBgPreview(bgValue) {
+            const preview = document.getElementById('bg-preview');
+            if (!preview) return;
+            if (bgValue.startsWith('data:image') || bgValue.startsWith('http')) {
+                preview.style.background = `url('${bgValue}') center/cover no-repeat`;
+            } else {
+                preview.style.background = bgValue;
+            }
+        }
+
+        function highlightActiveBgPreset(activeBg) {
+            document.querySelectorAll('.bg-preset').forEach(el => {
+                if (el.getAttribute('data-bg') === activeBg) {
+                    el.style.borderColor = '#58a6ff';
+                    el.style.boxShadow = '0 0 0 2px rgba(88,166,255,0.4)';
+                } else {
+                    el.style.borderColor = 'transparent';
+                    el.style.boxShadow = 'none';
+                }
+            });
+        }
+
+        // Init background UI on page load (added to DOMContentLoaded below)
+
 
         function saveMonitoring() {
             saveSection('monitoring', {
@@ -1429,6 +2102,9 @@
                 })
                 .then(result => {
                     if (result.success) {
+                        if (section === 'general' && data.server_name !== undefined) {
+                            localStorage.setItem('serverDisplayName', data.server_name || 'MuhfiDesk');
+                        }
                         showMsg('Settings saved successfully!', 'success');
                         setTimeout(() => location.reload(), 1000);
                     } else {
@@ -1514,6 +2190,150 @@
             window.history.replaceState({}, document.title, window.location.pathname);
         }
 
+        // ===== TELEGRAM NOTIFICATION =====
+        function loadTelegramConfig() {
+            fetch('/api/telegram/config')
+                .then(r => r.json())
+                .then(data => {
+                    const enabledCb = document.getElementById('tg-enabled');
+                    enabledCb.checked = data.enabled;
+                    updateToggleSwitch(enabledCb);
+
+                    if (data.bot_token_masked) {
+                        document.getElementById('tg-bot-token').placeholder = data.bot_token_masked;
+                        document.getElementById('tg-token-status').innerHTML = '<i class="fa-solid fa-circle-check" style="color:#3fb950"></i> Token sudah terkonfigurasi';
+                    }
+                    if (data.chat_id) {
+                        document.getElementById('tg-chat-id').value = data.chat_id;
+                    }
+
+                    const intervalSlider = document.getElementById('tg-interval');
+                    intervalSlider.value = data.report_interval || 10;
+                    document.getElementById('tg-interval-val').textContent = intervalSlider.value + 'm';
+
+                    const cpuSlider = document.getElementById('tg-cpu-threshold');
+                    cpuSlider.value = data.alert_cpu_threshold || 90;
+                    document.getElementById('tg-cpu-val').textContent = cpuSlider.value + '%';
+
+                    const ramSlider = document.getElementById('tg-ram-threshold');
+                    ramSlider.value = data.alert_ram_threshold || 90;
+                    document.getElementById('tg-ram-val').textContent = ramSlider.value + '%';
+
+                    document.getElementById('tg-alert-docker').checked = data.alert_docker_crash !== false;
+                    document.getElementById('tg-alert-brute').checked = data.alert_brute_force !== false;
+                    document.getElementById('tg-alert-backup').checked = data.alert_backup !== false;
+                })
+                .catch(() => {});
+
+            // Slider live update
+            document.getElementById('tg-interval').addEventListener('input', e => {
+                document.getElementById('tg-interval-val').textContent = e.target.value + 'm';
+            });
+            document.getElementById('tg-cpu-threshold').addEventListener('input', e => {
+                document.getElementById('tg-cpu-val').textContent = e.target.value + '%';
+            });
+            document.getElementById('tg-ram-threshold').addEventListener('input', e => {
+                document.getElementById('tg-ram-val').textContent = e.target.value + '%';
+            });
+
+            // Toggle switch visual
+            document.getElementById('tg-enabled').addEventListener('change', function() {
+                updateToggleSwitch(this);
+            });
+        }
+
+        function updateToggleSwitch(cb) {
+            const parent = cb.parentElement;
+            const bg = parent.querySelector('span:first-of-type');
+            const dot = parent.querySelector('.tg-slider-dot');
+            if (cb.checked) {
+                bg.style.background = '#29a9eb';
+                dot.style.left = '25px';
+            } else {
+                bg.style.background = '#30363d';
+                dot.style.left = '3px';
+            }
+        }
+
+        function saveTelegram() {
+            const data = {
+                enabled: document.getElementById('tg-enabled').checked,
+                chat_id: document.getElementById('tg-chat-id').value,
+                report_interval: parseInt(document.getElementById('tg-interval').value),
+                alert_cpu_threshold: parseInt(document.getElementById('tg-cpu-threshold').value),
+                alert_ram_threshold: parseInt(document.getElementById('tg-ram-threshold').value),
+                alert_docker_crash: document.getElementById('tg-alert-docker').checked,
+                alert_brute_force: document.getElementById('tg-alert-brute').checked,
+                alert_backup: document.getElementById('tg-alert-backup').checked
+            };
+
+            // Only send bot_token if user entered a new one
+            const tokenInput = document.getElementById('tg-bot-token').value.trim();
+            if (tokenInput) {
+                data.bot_token = tokenInput;
+            }
+
+            fetch('/api/telegram/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(r => r.json())
+            .then(result => {
+                if (result.success) {
+                    showMsg('Telegram config saved!', 'success');
+                    // Reload to update masked token
+                    loadTelegramConfig();
+                    // Clear token input
+                    document.getElementById('tg-bot-token').value = '';
+                } else {
+                    showMsg('Error: ' + (result.error || 'Failed'), 'error');
+                }
+            })
+            .catch(() => showMsg('Request failed', 'error'));
+        }
+
+        function testTelegram() {
+            const btn = document.getElementById('btn-tg-test');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
+
+            fetch('/api/telegram/test', { method: 'POST' })
+                .then(r => r.json())
+                .then(result => {
+                    if (result.success) {
+                        showMsg('✅ Test message terkirim! Cek Telegram kamu.', 'success');
+                    } else {
+                        showMsg('❌ Gagal: ' + (result.error || 'Unknown error'), 'error');
+                    }
+                })
+                .catch(() => showMsg('Request failed', 'error'))
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Kirim Test Message';
+                });
+        }
+
+        function sendReportNow() {
+            const btn = document.getElementById('btn-tg-report');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
+
+            fetch('/api/telegram/send-report', { method: 'POST' })
+                .then(r => r.json())
+                .then(result => {
+                    if (result.success) {
+                        showMsg('📊 Monitoring report terkirim!', 'success');
+                    } else {
+                        showMsg('❌ Gagal: ' + (result.error || 'Unknown error'), 'error');
+                    }
+                })
+                .catch(() => showMsg('Request failed', 'error'))
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-chart-line"></i> Kirim Report Sekarang';
+                });
+        }
 
 
         if (urlParams.get('error') === 'access_denied') {
@@ -1521,6 +2341,185 @@
             setTimeout(() => {
                 showAdModal(feature);
             }, 100);
+        }
+
+        // ===== THEME SELECTOR (Settings Page) =====
+        function selectThemeCard(themeName) {
+            // Visual
+            document.querySelectorAll('.theme-radio-card').forEach(c => c.classList.remove('active'));
+            const card = document.getElementById('tcard-' + themeName);
+            if (card) card.classList.add('active');
+            // Apply live
+            if (typeof setTheme === 'function') setTheme(themeName);
+            // Update bg preview
+            updateBgPreview();
+        }
+
+        function updateBgPreview() {
+            const preview = document.getElementById('bg-preview');
+            if (!preview) return;
+            const customBg = localStorage.getItem('dashboard_custom_bg');
+            const theme = localStorage.getItem('dashboard_theme') || 'dark';
+            const DEFAULT_BG = {
+                dark:         '#0f1117',
+                light:        'linear-gradient(135deg,#e0e7ef,#f0f4f8)',
+                glassmorphic: 'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460,#533483)'
+            };
+            const bg = customBg || DEFAULT_BG[theme] || DEFAULT_BG.dark;
+            if (bg.startsWith('data:image') || bg.startsWith('http')) {
+                preview.style.backgroundImage = `url('${bg}')`;
+                preview.style.backgroundSize  = 'cover';
+                preview.style.backgroundPosition = 'center';
+                preview.style.backgroundColor = '';
+            } else if (bg.includes('gradient')) {
+                preview.style.backgroundImage = bg;
+                preview.style.backgroundColor = '';
+            } else {
+                preview.style.backgroundColor = bg;
+                preview.style.backgroundImage = '';
+            }
+        }
+
+        function selectBgPreset(el) {
+            document.querySelectorAll('.bg-preset').forEach(p => p.classList.remove('active'));
+            el.classList.add('active');
+            const bg = el.dataset.bg;
+            if (typeof setCustomBackground === 'function') setCustomBackground(bg);
+            updateBgPreview();
+        }
+
+        function applyCustomColor() {
+            const hex = document.getElementById('bg-color-hex').value.trim()
+                     || document.getElementById('bg-color-picker').value;
+            if (!hex) return;
+            if (typeof setCustomBackground === 'function') setCustomBackground(hex);
+            updateBgPreview();
+        }
+
+        function resetBackground() {
+            document.querySelectorAll('.bg-preset').forEach(p => p.classList.remove('active'));
+            // Clear wallpaper name
+            const nameEl = document.getElementById('wallpaper-name');
+            if (nameEl) { nameEl.style.display='none'; nameEl.textContent=''; }
+            if (typeof resetCustomBackground === 'function') resetCustomBackground();
+            setTimeout(updateBgPreview, 100);
+        }
+
+        function handleSettingsWallpaperUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX_W = 1920, MAX_H = 1080;
+                    let {width, height} = img;
+                    if (width > MAX_W || height > MAX_H) {
+                        const ratio = Math.min(MAX_W/width, MAX_H/height);
+                        width = Math.round(width*ratio); height = Math.round(height*ratio);
+                    }
+                    canvas.width = width; canvas.height = height;
+                    canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                    let dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                    if (dataUrl.length > 1_300_000) dataUrl = canvas.toDataURL('image/jpeg', 0.55);
+                    if (dataUrl.length > 1_300_000) dataUrl = canvas.toDataURL('image/jpeg', 0.35);
+                    try {
+                        if (typeof setCustomBackground === 'function') setCustomBackground(dataUrl);
+                        updateBgPreview();
+                        // Show filename
+                        const nameEl = document.getElementById('wallpaper-name');
+                        if (nameEl) {
+                            nameEl.style.display = 'flex';
+                            nameEl.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + file.name + ' berhasil dimuat!';
+                        }
+                    } catch(err) {
+                        alert('Gambar terlalu besar. Coba gambar yang lebih kecil.');
+                    }
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        function handleDropZone(event) {
+            event.preventDefault();
+            document.getElementById('wallpaper-dropzone').classList.remove('drag-over');
+            const file = event.dataTransfer.files[0];
+            if (!file || !file.type.startsWith('image/')) return;
+            // reuse the upload handler
+            const fakeEvt = { target: { files: [file], value: '' } };
+            handleSettingsWallpaperUpload(fakeEvt);
+        }
+
+        // Init appearance UI on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Mark active theme card
+            const savedTheme = localStorage.getItem('dashboard_theme') || 'glassmorphic';
+            const card = document.getElementById('tcard-' + savedTheme);
+            if (card) card.classList.add('active');
+            // Update preview
+            setTimeout(updateBgPreview, 300);
+            // Sync color picker with hex input
+            const picker = document.getElementById('bg-color-picker');
+            const hexIn  = document.getElementById('bg-color-hex');
+            if (picker && hexIn) {
+                picker.addEventListener('input', () => { hexIn.value = picker.value; });
+                hexIn.addEventListener('input', () => {
+                    if (/^#[0-9a-fA-F]{6}$/.test(hexIn.value)) picker.value = hexIn.value;
+                });
+            }
+            // Load server identity
+            loadIdentity();
+        });
+
+        // ===== SERVER IDENTITY =====
+        function loadIdentity() {
+            const ICONS = {
+                local_ip:       { icon: 'fa-network-wired', color: '#58a6ff', bg: 'rgba(88,166,255,0.12)', label: 'Server IP' },
+                hostname:       { icon: 'fa-globe',          color: '#3fb950', bg: 'rgba(63,185,80,0.12)',   label: 'Domain / Host' },
+                provider:       { icon: 'fa-cloud',          color: '#e3b341', bg: 'rgba(227,179,65,0.12)',  label: 'Provider VPS' },
+                distro:         { icon: 'fa-linux',          color: '#e6edf3', bg: 'rgba(255,255,255,0.08)', label: 'OS Version' },
+                kernel:         { icon: 'fa-microchip',      color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', label: 'Kernel' },
+                docker_version: { icon: 'fa-brands fa-docker', color: '#2496ed', bg: 'rgba(36,150,237,0.12)', label: 'Docker' },
+                cpu_model:      { icon: 'fa-microchip',      color: '#f08533', bg: 'rgba(240,133,51,0.12)',  label: 'CPU' },
+                machine:        { icon: 'fa-server',         color: '#8b949e', bg: 'rgba(139,148,158,0.12)', label: 'Architecture' },
+            };
+            const ORDER = ['local_ip','hostname','provider','distro','kernel','docker_version','cpu_model','machine'];
+
+            fetch('/api/server-identity')
+                .then(r => r.json())
+                .then(data => {
+                    const el = document.getElementById('identity-list');
+                    if (!el) return;
+                    el.innerHTML = '';
+                    ORDER.forEach(key => {
+                        if (!(key in data)) return;
+                        const cfg = ICONS[key] || { icon: 'fa-info-circle', color: '#8b949e', bg: 'rgba(255,255,255,0.05)', label: key };
+                        const val = data[key] || '—';
+                        const row = document.createElement('div');
+                        row.className = 'identity-row';
+                        row.innerHTML = `
+                            <div class="identity-icon" style="background:${cfg.bg}; color:${cfg.color}">
+                                <i class="fa-solid ${cfg.icon}"></i>
+                            </div>
+                            <div class="identity-label">${cfg.label}</div>
+                            <div class="identity-value">${val}</div>
+                        `;
+                        el.appendChild(row);
+                    });
+                })
+                .catch(() => {
+                    const el = document.getElementById('identity-list');
+                    if (el) el.innerHTML = '<div style="padding:1.5rem;text-align:center;color:#f85149;font-size:0.82rem"><i class="fa-solid fa-circle-xmark"></i> Gagal memuat info server</div>';
+                });
+        }
+
+        function refreshIdentity() {
+            const el = document.getElementById('identity-list');
+            if (el) el.innerHTML = '<div style="text-align:center;padding:2rem;color:#8b949e;font-size:0.85rem"><i class="fa-solid fa-spinner fa-spin"></i> Refreshing...</div>';
+            setTimeout(loadIdentity, 300);
         }
     </script>
     <!-- Access Denied Modal -->

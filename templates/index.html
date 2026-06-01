@@ -2,6 +2,7 @@
 <html lang="en">
 
 <head>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MuhfiDesk</title>
@@ -12,7 +13,7 @@
     <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=13">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=16">
     <style>
         /* Logout Modal */
         .logout-overlay {
@@ -212,6 +213,134 @@
             transform: translateY(-3px);
             box-shadow: 0 15px 25px rgba(255, 107, 107, 0.4);
         }
+
+        /* Docker Status Panel */
+        .docker-panel {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            width: 380px;
+            max-height: 600px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            backdrop-filter: blur(10px);
+        }
+
+        .docker-panel.active {
+            display: flex;
+        }
+
+        .docker-panel-header {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(36, 150, 237, 0.1);
+        }
+
+        .docker-panel-header h3 {
+            margin: 0;
+            color: #2496ed;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .docker-panel-body {
+            padding: 1rem;
+            overflow-y: auto;
+            max-height: 500px;
+            flex: 1;
+        }
+
+        .docker-container-item {
+            padding: 0.8rem;
+            margin-bottom: 0.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 3px solid #aaa;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .docker-container-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .docker-container-item.running {
+            border-left-color: #22c55e;
+            background: rgba(34, 197, 94, 0.08);
+        }
+
+        .docker-container-item.stopped {
+            border-left-color: #ef4444;
+            background: rgba(239, 68, 68, 0.08);
+        }
+
+        .docker-status-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+
+        .docker-status-icon.running {
+            background: #22c55e;
+            color: white;
+        }
+
+        .docker-status-icon.stopped {
+            background: #ef4444;
+            color: white;
+        }
+
+        .docker-container-info {
+            flex: 1;
+        }
+
+        .docker-container-name {
+            font-weight: 500;
+            color: #f0f6fc;
+            font-size: 0.9rem;
+        }
+
+        .docker-container-status {
+            font-size: 0.75rem;
+            color: #8b949e;
+            margin-top: 0.2rem;
+        }
+
+        .docker-panel-empty {
+            text-align: center;
+            color: #8b949e;
+            padding: 2rem 1rem;
+            font-style: italic;
+        }
+
+        .docker-refresh-btn {
+            background: none;
+            border: none;
+            color: #8b949e;
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 0.5rem;
+        }
+
+        .docker-refresh-btn:hover {
+            color: #2496ed;
+        }
     </style>
 </head>
 
@@ -295,7 +424,7 @@
                 </div>
 
                 <!-- Disk Widget -->
-                <div class="widget-card glass">
+                <div class="widget-card glass" onclick="openStorageManager()" style="cursor: pointer;">
                     <div class="widget-header">
                         <div class="icon-box disk-color">
                             <i class="fa-solid fa-hard-drive"></i>
@@ -374,22 +503,17 @@
                 </div>
 
                 <!-- Web Monitor Widget -->
-                <div class="widget-card glass" onclick="window.location.href='/web_monitor'" style="cursor: pointer;">
+                <div class="widget-card glass" onclick="openDockerStatusPanel()" style="cursor: pointer;">
                     <div class="widget-header">
-                        <div class="icon-box" style="background:#14b8a6; box-shadow:0 0 10px rgba(20, 184, 166, 0.3)">
-                            <i class="fa-solid fa-shield-halved"></i>
+                        <div class="icon-box" style="background:#2496ed; box-shadow:0 0 10px rgba(36, 150, 237, 0.3)">
+                            <i class="fa-brands fa-docker"></i>
                         </div>
-                        <h3>Web Shield</h3>
+                        <h3>Docker Status</h3>
                     </div>
                     <div class="widget-body">
-                        <div class="power-stats">
-                            <div style="display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 5px;">
-                                <span id="web-status-icon" style="font-size:1.2rem; color:#14b8a6;"><i class="fa-solid fa-circle-check"></i></span>
-                                <span style="font-weight: bold; font-size: 1.1rem; color: #fff;" id="web-domain">example.com</span>
-                            </div>
-                            <div style="font-size:0.9rem; color:#aaa; margin-top:5px; display:flex; justify-content:space-between; width:100%; padding: 0 10px;">
-                                <span>Req: <strong id="web-reqs" style="color:#14b8a6;">...</strong></span>
-                                <span>IPs: <strong id="web-ips" style="color:#14b8a6;">...</strong></span>
+                        <div class="power-stats" id="docker-status-widget">
+                            <div style="text-align: center; color: #aaa;">
+                                <i class="fa-solid fa-spinner fa-spin"></i> Loading...
                             </div>
                         </div>
                     </div>
@@ -447,6 +571,35 @@
         </div>
     </div>
 
+    <!-- Storage Manager Modal -->
+    <div class="storage-modal-overlay" id="storage-manager-modal" onclick="closeStorageManager(event)">
+        <div class="storage-modal-card" onclick="event.stopPropagation()">
+            <div class="sm-header">
+                <h2>Storage Manager</h2>
+                <button class="sm-close-btn" onclick="closeStorageManager()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div class="sm-tabs-header">
+                <div class="sm-tabs">
+                    <button class="sm-tab active">Storage</button>
+                    <button class="sm-tab">Drive</button>
+                </div>
+                <button class="sm-create-btn">Create Storage</button>
+            </div>
+
+            <div class="sm-body" id="storage-manager-body">
+                <!-- Dynamically injected items -->
+                <div style="text-align: center; padding: 2rem; color: #aaa;">Loading...</div>
+            </div>
+
+            <div class="sm-footer">
+                <button class="sm-merge-btn">
+                    <span class="sm-beta-tag">Beta</span> Merge storages
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script>
         window.userRole = "{{ session.get('role', 'readonly') }}";
@@ -475,9 +628,174 @@
             }, 100);
         }
     </script>
-    <script src="{{ url_for('static', filename='script.js') }}?v=10"></script>
+    <script src="{{ url_for('static', filename='script.js') }}?v=11"></script>
 
     <script src="{{ url_for('static', filename='theme.js') }}"></script>
+    
+    <!-- 3D Tilt Effect Preview -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            VanillaTilt.init(document.querySelectorAll(".widget-card.glass"), {
+                max: 12,
+                speed: 400,
+                glare: true,
+                "max-glare": 0.15,
+                scale: 1.03
+            });
+            
+            // Also apply to app icons if they exist
+            VanillaTilt.init(document.querySelectorAll(".app-icon"), {
+                max: 15,
+                speed: 400,
+                glare: true,
+                "max-glare": 0.2
+            });
+
+            // Load Docker status on page load
+            refreshDockerStatus();
+            
+            // Auto-refresh every 5 seconds
+            setInterval(refreshDockerStatus, 5000);
+        });
+
+        // Docker Status Functions
+        async function refreshDockerStatus() {
+            try {
+                const response = await fetch('/api/docker/containers');
+                const data = await response.json();
+                
+                const containerList = Array.isArray(data) ? data : (data.containers || []);
+                updateDockerWidget(containerList);
+                updateDockerPanel(containerList);
+            } catch (error) {
+                console.error('Failed to fetch docker status:', error);
+            }
+        }
+
+        function updateDockerWidget(containers) {
+            const widget = document.getElementById('docker-status-widget');
+            if (!widget) return;
+
+            if (containers.length === 0) {
+                widget.innerHTML = `<div style="text-align: center; color: #8b949e; padding-top: 10px;">No containers</div>`;
+                return;
+            }
+
+            const listHtml = containers.map(c => {
+                const isRunning = c.status === 'running';
+                const icon = isRunning ? '🟢' : '🔴';
+                const color = isRunning ? '#c9d1d9' : '#8b949e';
+                const fw = isRunning ? '600' : '400';
+                const bg = isRunning ? 'rgba(255,255,255,0.04)' : 'transparent';
+                
+                return `
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; margin-bottom: 6px; background: ${bg}; border-radius: 8px; font-size: 1rem; color: ${color}; font-weight: ${fw}; transition: all 0.2s;">
+                        <div style="display: flex; align-items: center; gap: 10px; overflow: hidden; width:100%">
+                            <span style="font-size: 0.8rem; filter: drop-shadow(0 0 4px ${isRunning ? 'rgba(46,160,67,0.5)' : 'transparent'});">${icon}</span>
+                            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${c.name}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            widget.innerHTML = `
+                <style>
+                    .docker-scroll-list::-webkit-scrollbar { width: 5px; }
+                    .docker-scroll-list::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 5px; }
+                    .docker-scroll-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 5px; }
+                    .docker-scroll-list::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+                </style>
+                <div class="docker-scroll-list" style="width: 100%; max-height: 180px; overflow-y: auto; text-align: left; padding-right: 4px; margin-top: 5px;">
+                    ${listHtml}
+                </div>
+            `;
+        }
+
+        function updateDockerPanel(containers) {
+            const panelBody = document.getElementById('docker-panel-body');
+            if (!panelBody) return;
+
+            if (containers.length === 0) {
+                panelBody.innerHTML = '<div class="docker-panel-empty">No containers found</div>';
+                return;
+            }
+
+            panelBody.innerHTML = containers.map(container => {
+                const isRunning = container.status === 'running';
+                const statusColor = isRunning ? 'running' : 'stopped';
+                const statusText = isRunning ? 'Running' : 'Stopped';
+
+                let iconName = 'docker';
+                if (container.image) {
+                    let imgParts = container.image.split(':')[0].split('/');
+                    iconName = imgParts[imgParts.length - 1];
+                }
+                if (iconName === 'portainer-ce' || iconName === 'agent') iconName = 'portainer';
+                if (iconName === 'pihole') iconName = 'pi-hole';
+                if (iconName === 'adguardhome') iconName = 'adguard-home';
+                
+                const iconUrl = `https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/${iconName}.svg`;
+
+                return `
+                    <div class="docker-container-item ${statusColor}">
+                        <div class="docker-status-icon ${statusColor}" style="background: rgba(255,255,255,0.05); overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                            <img src="${iconUrl}" style="width: 16px; height: 16px; object-fit: contain;" onerror="this.onerror=null; this.outerHTML='<i class=\\'fa-brands fa-docker\\' style=\\'color: ${isRunning ? '#22c55e' : '#ef4444'};\\'></i>';">
+                        </div>
+                        <div class="docker-container-info">
+                            <div class="docker-container-name">${container.name}</div>
+                            <div class="docker-container-status">${container.image}</div>
+                            <div class="docker-container-status">Status: ${statusText}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openDockerStatusPanel() {
+            const panel = document.getElementById('docker-panel');
+            if (panel) {
+                panel.classList.add('active');
+                refreshDockerStatus();
+            }
+        }
+
+        function closeDockerPanel() {
+            const panel = document.getElementById('docker-panel');
+            if (panel) {
+                panel.classList.remove('active');
+            }
+        }
+
+        // Close panel saat klik di luar
+        document.addEventListener('click', (e) => {
+            const panel = document.getElementById('docker-panel');
+            const widget = document.querySelector('[onclick="openDockerStatusPanel()"]');
+            
+            if (panel && !panel.contains(e.target) && !widget?.contains(e.target)) {
+                closeDockerPanel();
+            }
+        });
+    </script>
+
+    <!-- Docker Status Panel -->
+    <div id="docker-panel" class="docker-panel">
+        <div class="docker-panel-header">
+            <h3><i class="fa-brands fa-docker"></i> Running Containers</h3>
+            <div style="display: flex; gap: 0.5rem;">
+                <button class="docker-refresh-btn" onclick="refreshDockerStatus()" title="Refresh">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+                <button class="docker-refresh-btn" onclick="closeDockerPanel()" title="Close">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+        </div>
+        <div class="docker-panel-body" id="docker-panel-body">
+            <div class="docker-panel-empty">Loading containers...</div>
+        </div>
+    </div>
+
 </body>
 
 </html>

@@ -29,6 +29,15 @@ function updateClock() {
     document.getElementById('clock-date').textContent = dateString;
 }
 
+function applyServerDisplayName(name) {
+    const displayName = (name || '').trim();
+    if (!displayName) return;
+
+    const hostname = document.getElementById('hostname');
+    if (hostname) hostname.textContent = displayName;
+    document.title = displayName;
+}
+
 function updateGauge(id, percent, textOverride = null) {
     const circle = document.getElementById(`${id}-circle`);
     const text = document.getElementById(`${id}-text`);
@@ -496,6 +505,11 @@ function initHome() {
     fetch('/api/monitoring/config')
         .then(r => r.json())
         .then(settings => {
+            if (settings.general && settings.general.server_name) {
+                applyServerDisplayName(settings.general.server_name);
+                localStorage.setItem('serverDisplayName', settings.general.server_name);
+            }
+
             if (settings.mqtt && settings.mqtt.enabled && settings.mqtt.devices) {
                 homeDevices = settings.mqtt.devices;
                 const widget = document.getElementById('home-widget-card');
@@ -613,14 +627,24 @@ function loadDashboardApps() {
 
 function renderDashboardApps(apps) {
     const grid = document.getElementById('apps-grid');
-    grid.innerHTML = apps.map(app => `
+    grid.innerHTML = apps.map(app => {
+        // Check if this is a Docker app
+        const isDockerApp = app.type === 'docker';
+        const statusBadge = isDockerApp ? `
+            <div class="app-status-badge ${app.status}" title="${app.status === 'running' ? 'Running' : 'Stopped'}">
+                <i class="fa-solid fa-circle"></i>
+            </div>
+        ` : '';
+        
+        return `
         <div class="app-item glass" draggable="true" data-id="${app.id}" onclick="handleAppClick(event, '${app.url}')">
-            <div class="app-icon" style="background: ${app.color};">
-                ${app.icon.startsWith('/') ? `<img src="${app.icon}" style="width:32px;height:32px;filter:brightness(0) invert(1)">` : `<i class="${app.icon.startsWith('fa') ? app.icon : 'fa-solid fa-' + app.icon}"></i>`}
+            ${statusBadge}
+            <div class="app-icon" style="--app-color: ${app.color};">
+                ${app.icon.startsWith('http') ? `<img src="${app.icon}" style="width:32px;height:32px;" onerror="this.src='https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/docker.png'">` : app.icon.startsWith('/') ? `<img src="${app.icon}" style="width:32px;height:32px;filter:brightness(0) invert(1)">` : `<i class="${app.icon.startsWith('fa') ? app.icon : 'fa-solid fa-' + app.icon}"></i>`}
             </div>
             <span class="app-name">${app.name}</span>
         </div>
-    `).join('');
+    `}).join('');
 
     // Attach DnD Handlers
     const items = grid.querySelectorAll('.app-item');
@@ -755,3 +779,76 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(updateWebMonitor, 10000); // Polling every 10s
 });
 
+// ─── STORAGE MANAGER ────────────────────────────────────────────────────────
+
+function openStorageManager() {
+    const modal = document.getElementById('storage-manager-modal');
+    if (!modal) return;
+    modal.classList.add('active');
+    
+    const body = document.getElementById('storage-manager-body');
+    body.innerHTML = '<div style="text-align: center; padding: 2rem; color: #aaa;">Loading disk information...</div>';
+    
+    fetch('/api/storage/disks')
+        .then(res => res.json())
+        .then(data => {
+            if (!data.disks) {
+                body.innerHTML = '<div style="text-align: center; padding: 2rem; color: #ff6b6b;">Failed to load disk info</div>';
+                return;
+            }
+            
+            let html = '';
+            data.disks.forEach(disk => {
+                // If it has children (partitions), iterate them. If not, just show the disk itself if it has a mountpoint/size
+                let itemsToShow = [];
+                if (disk.children && disk.children.length > 0) {
+                    itemsToShow = disk.children;
+                } else {
+                    itemsToShow = [disk];
+                }
+                
+                itemsToShow.forEach(item => {
+                    if (!item.size || item.size === "0B" || !item.mountpoint) return;
+                    
+                    const isOS = item.mountpoint === '/';
+                    const fstype = item.fstype || 'Unknown FS';
+                    const used = item.used || '0B';
+                    const free = item.free || '0B';
+                    const percent = item.percent || 0;
+                    
+                    html += `
+                        <div class="sm-item">
+                            <div class="sm-icon">
+                                <i class="fa-solid fa-hard-drive"></i>
+                            </div>
+                            <div class="sm-info">
+                                <div class="sm-info-header">
+                                    <h3>${isOS ? 'System' : (item.name || 'Drive')}</h3>
+                                    ${isOS ? '<span class="sm-os-tag">OS</span>' : ''}
+                                </div>
+                                <div class="sm-desc">Single storage drive, ${fstype.toUpperCase()}</div>
+                                <div class="sm-stats">${item.mountpoint} | Available: ${free} (Total: ${item.size})</div>
+                                <div class="sm-progress-bg">
+                                    <div class="sm-progress-fill" style="width: ${percent}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+            
+            if (html === '') {
+                html = '<div style="text-align: center; padding: 2rem; color: #aaa;">No mounted storage found</div>';
+            }
+            body.innerHTML = html;
+        })
+        .catch(err => {
+            console.error("Storage Manager error:", err);
+            body.innerHTML = '<div style="text-align: center; padding: 2rem; color: #ff6b6b;">Error connecting to server</div>';
+        });
+}
+
+function closeStorageManager(event) {
+    const modal = document.getElementById('storage-manager-modal');
+    if (modal) modal.classList.remove('active');
+}

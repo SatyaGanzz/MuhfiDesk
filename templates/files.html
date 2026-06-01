@@ -2,6 +2,7 @@
 <html lang="en">
 
 <head>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Files - MuhfiDesk</title>
@@ -305,6 +306,87 @@
             display: flex;
             justify-content: space-between;
         }
+
+        /* Locations Sidebar */
+        .fm-locations {
+            margin-top: 1.5rem;
+            padding: 0 0.5rem;
+        }
+        .fm-loc-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 0.5rem;
+            padding: 0 0.5rem;
+        }
+        .fm-btn-small {
+            background: transparent;
+            border: none;
+            color: #aaa;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .fm-btn-small:hover {
+            color: #fff;
+        }
+        .loc-dropdown {
+            background: rgba(40, 40, 50, 0.95);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 0.5rem;
+            margin-top: 0.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+        .loc-dropdown.hidden {
+            display: none;
+        }
+        .loc-item {
+            padding: 0.5rem;
+            font-size: 0.85rem;
+            color: #ccc;
+            cursor: pointer;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .loc-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+    
+        /* Drag and Drop Overlay */
+        #drop-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 600;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        #drop-overlay.active {
+            opacity: 1;
+        }
+        #drop-overlay i {
+            font-size: 4rem;
+            color: #FF9966;
+            margin-bottom: 1rem;
+        }
     </style>
 </head>
 
@@ -329,6 +411,19 @@
             <!-- Sidebar Tree -->
             <div class="fm-sidebar" id="sidebar">
                 <div id="sidebar-tree"></div>
+                
+                <!-- Cloud Storage Locations -->
+                <div class="fm-locations">
+                    <div class="fm-loc-header">
+                        <span>Location</span>
+                        <button class="fm-btn-small" onclick="toggleLocationMenu(event)"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                    
+                    <div class="loc-dropdown hidden" id="loc-dropdown">
+                        <div class="loc-item"><i class="fa-solid fa-hard-drive" style="color: #cbd5e1;"></i> New local storage</div>
+
+                    </div>
+                </div>
             </div>
 
             <!-- Main Content -->
@@ -438,6 +533,11 @@
         <script src="{{ url_for('static', filename='files.js') }}?v=2"></script>
 
     <script src="{{ url_for('static', filename='theme.js') }}"></script>
+
+    <div id="drop-overlay">
+        <i class="fa-solid fa-cloud-arrow-up"></i>
+        <div>Drop files here to upload</div>
+    </div>
 </body>
 
 </html>
