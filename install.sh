@@ -101,7 +101,7 @@ else
     echo "⚠️ 'systemd' is not running (likely inside a container or WSL)."
     echo "✅ MuhfiDesk successfully installed!"
     echo "🔄 To start the dashboard manually, run:"
-    echo "   cd $INSTALL_DIR && .venv/bin/python app.py"
+    echo "   cd $INSTALL_DIR && sudo .venv/bin/python app.py"
     echo "🌐 Then access your dashboard at: http://localhost:$PORT"
     echo "==========================================================="
 fi
