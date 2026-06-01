@@ -79,13 +79,21 @@ EOF
 
 # 7. Enable and start the service
 echo "🔄 Starting MuhfiDesk service..."
-systemctl daemon-reload
-systemctl enable muhfidesk.service
-systemctl restart muhfidesk.service
-
-echo ""
-echo "==========================================================="
-echo "✅ MuhfiDesk successfully installed and running!"
-echo "🌐 Access your dashboard at: http://localhost:$PORT"
-echo "📄 To view logs, run: journalctl -u muhfidesk -f"
-echo "==========================================================="
+if command -v systemctl >/dev/null 2>&1 && pidof systemd >/dev/null 2>&1; then
+    systemctl daemon-reload
+    systemctl enable muhfidesk.service
+    systemctl restart muhfidesk.service
+    echo ""
+    echo "==========================================================="
+    echo "✅ MuhfiDesk successfully installed and running as a background service!"
+    echo "🌐 Access your dashboard at: http://localhost:$PORT"
+    echo "📄 To view logs, run: journalctl -u muhfidesk -f"
+    echo "==========================================================="
+else
+    echo "⚠️ 'systemd' is not running (likely inside a container or WSL)."
+    echo "✅ MuhfiDesk successfully installed!"
+    echo "🔄 To start the dashboard manually, run:"
+    echo "   cd $INSTALL_DIR && .venv/bin/python app.py"
+    echo "🌐 Then access your dashboard at: http://localhost:$PORT"
+    echo "==========================================================="
+fi
