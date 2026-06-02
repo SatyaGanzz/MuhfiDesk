@@ -5,6 +5,8 @@ let currentPage = 1;
 let hasMore = false;
 let isLoading = false;
 let viewMode = 'drives'; // 'files' or 'drives'
+let currentSortBy = 'name';
+let currentSortOrder = 'asc';
 
 // Quick folder list for sidebar
 const quickFolders = [];
@@ -200,12 +202,11 @@ function loadFiles(path, page = 1) {
         document.getElementById('status-text').textContent = 'Loading...';
         currentPage = 1;
         selectedItem = null;
-        updateDetailPanel();
     }
 
     isLoading = true;
 
-    fetch(`/api/files/list?path=${encodeURIComponent(path)}&page=${page}`)
+    fetch(`/api/files/list?path=${encodeURIComponent(path)}&page=${page}&sort_by=${currentSortBy}&order=${currentSortOrder}`)
         .then(r => r.json())
         .then(data => {
             isLoading = false;
@@ -343,35 +344,91 @@ function selectRow(tr, item, e) {
     document.querySelectorAll('.fm-table tr').forEach(r => r.classList.remove('selected'));
     tr.classList.add('selected');
     selectedItem = item;
-    updateDetailPanel();
 
     // Don't trigger when right-clicking
     if (e && e.button === 2) return;
 }
 
 function updateDetailPanel() {
-    const panel = document.getElementById('detail-panel');
-    if (!selectedItem) {
-        panel.classList.add('hidden');
-        return;
-    }
+    // Removed
+}
 
-    panel.classList.remove('hidden');
-    document.getElementById('detail-name').textContent = selectedItem.name;
-    document.getElementById('detail-type').textContent = selectedItem.is_dir ? 'Folder' : 'File';
-    document.getElementById('detail-size').textContent = selectedItem.size;
-    document.getElementById('detail-date').textContent = selectedItem.date;
-    document.getElementById('detail-perm').textContent = selectedItem.perm || '-';
-    document.getElementById('detail-uid').textContent = selectedItem.uid ?? '-';
-    document.getElementById('detail-gid').textContent = selectedItem.gid ?? '-';
+function closeDetailPanel() {
+    // Removed
+}
+
+function toggleSort(field) {
+    if (currentSortBy === field) {
+        currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSortBy = field;
+        currentSortOrder = 'asc';
+    }
+    
+    // Update icons
+    ['name', 'size', 'date'].forEach(f => {
+        const icon = document.getElementById('sort-icon-' + f);
+        if (icon) {
+            icon.className = 'fa-solid fa-sort';
+            if (f === currentSortBy) {
+                icon.className = currentSortOrder === 'asc' ? 'fa-solid fa-sort-up' : 'fa-solid fa-sort-down';
+            }
+        }
+    });
+
+    if (viewMode === 'files') {
+        loadFiles(currentPath, 1);
+    }
 }
 
 function openItem(item) {
     if (item.is_dir) {
         loadFiles(item.path);
     } else {
-        openEditor(item);
+        const ext = item.name.split('.').pop().toLowerCase();
+        const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'ico'];
+        const textExts = ['txt', 'log', 'md', 'conf', 'py', 'js', 'html', 'css', 'json', 'xml', 'sh', 'csv', 'yaml', 'yml', 'ini'];
+        
+        if (imageExts.includes(ext)) {
+            viewImage(item);
+        } else if (textExts.includes(ext) || !item.name.includes('.')) {
+            openEditor(item);
+        } else {
+            // For all other file types (pdf, zip, mp4, etc.), open in new tab (will download or preview in browser)
+            window.open('/api/files/download?path=' + encodeURIComponent(item.path), '_blank');
+        }
     }
+}
+
+function viewImage(item) {
+    let viewer = document.getElementById('image-viewer-overlay');
+    if (!viewer) {
+        viewer = document.createElement('div');
+        viewer.id = 'image-viewer-overlay';
+        viewer.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(5px);';
+        
+        viewer.innerHTML = `
+            <div style="width:100%;padding:1.5rem;display:flex;justify-content:space-between;position:absolute;top:0;box-sizing:border-box;">
+                <h3 id="image-viewer-title" style="color:#fff;margin:0;font-weight:400;text-shadow:0 2px 4px rgba(0,0,0,0.5);"></h3>
+                <button onclick="document.getElementById('image-viewer-overlay').style.display='none'" style="background:none;border:none;color:#fff;font-size:1.5rem;cursor:pointer;text-shadow:0 2px 4px rgba(0,0,0,0.5);"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <img id="image-viewer-img" src="" style="max-width:90%;max-height:80vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+            <div style="position:absolute;bottom:2rem;display:flex;gap:1rem;">
+                <button id="image-viewer-download" class="fm-btn" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);padding:0.6rem 1.2rem;font-size:1rem;"><i class="fa-solid fa-download"></i> Download</button>
+            </div>
+        `;
+        document.body.appendChild(viewer);
+    }
+    
+    document.getElementById('image-viewer-title').textContent = item.name;
+    const imgUrl = '/api/files/download?path=' + encodeURIComponent(item.path);
+    document.getElementById('image-viewer-img').src = imgUrl;
+    
+    document.getElementById('image-viewer-download').onclick = function() {
+        window.open(imgUrl, '_blank');
+    };
+    
+    viewer.style.display = 'flex';
 }
 
 function openSelected() {

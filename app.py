@@ -46,7 +46,7 @@ except ImportError:
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # ============ VERSI APLIKASI ============
-APP_VERSION = "1.3"
+APP_VERSION = "1.0"
 APP_NAME = "MuhfiDesk"
 UPDATE_CHECK_URL = "https://raw.githubusercontent.com/SatyaGanzz/muhfidesk/main/version.json"
 # ========================================
@@ -66,7 +66,7 @@ IS_ACTIVATED = False  # Cache validation status
 
 # Update Check URL (Administrator configurable via Code or ENV)
 UPDATE_CHECK_URL = os.environ.get('UPDATE_URL', "https://raw.githubusercontent.com/SatyaGanzz/muhfidesk/main/version.json")
-CURRENT_VERSION = "1.1"
+CURRENT_VERSION = "1.0"
 
 def energy_monitor_loop():
     global TOTAL_KWH
@@ -1246,6 +1246,8 @@ def files_page():
 def list_files():
     path = request.args.get('path', '/')
     page = int(request.args.get('page', 1))
+    sort_by = request.args.get('sort_by', 'name')
+    order = request.args.get('order', 'asc')
     per_page = 100
 
     # === GOOGLE DRIVE INTEGRATION ===
@@ -1308,7 +1310,10 @@ def list_files():
                     'date': item.get('modifiedTime', '').split('T')[0] if item.get('modifiedTime') else '-',
                     'perm': 'd------' if is_dir else '-------',
                     'uid': 'gdrive',
-                    'gid': 'gdrive'
+                    'gid': 'gdrive',
+                    'raw_size': raw_size,
+                    'raw_date': item.get('modifiedTime', ''),
+                    'raw_name': item.get('name', '').lower()
                 })
 
             return jsonify({
@@ -1348,10 +1353,13 @@ def list_files():
                 'date': '-',
                 'perm': '-',
                 'uid': '-',
-                'gid': '-'
+                'gid': '-',
+                'raw_size': 0,
+                'raw_date': 0,
+                'raw_name': ''
             })
 
-        entries = sorted(os.scandir(path), key=lambda e: (not e.is_dir(follow_symlinks=False), e.name.lower()))
+        entries = list(os.scandir(path))
 
         for entry in entries:
             if not is_owner_role() and is_sensitive_path(entry.path):
@@ -1379,12 +1387,31 @@ def list_files():
                     'date': date,
                     'perm': perm,
                     'uid': getattr(stat, 'st_uid', '-'),
-                    'gid': getattr(stat, 'st_gid', '-')
+                    'gid': getattr(stat, 'st_gid', '-'),
+                    'raw_size': stat.st_size if not is_dir else 0,
+                    'raw_date': stat.st_mtime,
+                    'raw_name': entry.name.lower()
                 })
             except PermissionError:
                 continue
             except Exception:
                 continue
+
+        # Sorting logic
+        is_reverse = (order == 'desc')
+        # We always keep '..' at the top
+        parent_item = [i for i in all_items if i['name'] == '..']
+        other_items = [i for i in all_items if i['name'] != '..']
+
+        if sort_by == 'size':
+            other_items.sort(key=lambda x: (not x['is_dir'], x['raw_size']), reverse=is_reverse)
+        elif sort_by == 'date':
+            other_items.sort(key=lambda x: (not x['is_dir'], x['raw_date']), reverse=is_reverse)
+        else:
+            # Default is name
+            other_items.sort(key=lambda x: (not x['is_dir'], x['raw_name']), reverse=is_reverse)
+
+        all_items = parent_item + other_items
 
         total = len(all_items)
         start = (page - 1) * per_page
@@ -2969,41 +2996,22 @@ def check_update_layout():
 @app.route('/api/perform-update', methods=['POST'])
 @login_required
 def perform_update():
-    """Melakukan update otomatis dari GitHub dan rebuild container"""
+    """Melakukan update otomatis dari GitHub"""
     if session.get('role') not in ['owner', 'admin']:
         return jsonify({'success': False, 'error': 'Akses ditolak.'}), 403
 
     try:
-        import docker
-        client = docker.from_env()
+        # Menjalankan git pull untuk mendapatkan pembaruan terbaru dari GitHub
+        update_cmd = f"cd '{BASE_DIR}' && git pull origin main"
+        subprocess.Popen(update_cmd, shell=True)
         
-        # Cari container dashboard ini
-        container = None
-        for c in client.containers.list():
-            if 'muhfidesk' in c.name:
-                container = c
-                break
-                
-        if not container:
-            # Fallback jika tidak ketemu berdasarkan nama
-            container = client.containers.get('muhfidesk')
-
-        working_dir = container.labels.get('com.docker.compose.project.working_dir')
-        
-        if not working_dir:
-            # Fallback manual jika gagal dideteksi
-            working_dir = '/root/muhfidesk'
-
-        # Eksekusi perintah di host untuk pull kode terbaru dan build ulang
-        # Perintah ini akan berjalan di background dan otomatis me-restart container
-        update_cmd = f"cd '{working_dir}' && git pull origin main && docker compose up --build -d"
-        nsenter_cmd = f"nsenter -m -u -i -n -p -t 1 sh -c \"{update_cmd}\""
-        
-        subprocess.Popen(nsenter_cmd, shell=True)
+        # Coba restart layanan secara asinkron agar respon API sempat terkirim
+        restart_cmd = f"sleep 3 && (sudo systemctl restart muhfidesk || kill -HUP {os.getpid()})"
+        subprocess.Popen(restart_cmd, shell=True)
         
         return jsonify({
             'success': True, 
-            'message': 'Sistem sedang memperbarui diri. Harap tunggu sekitar 1-2 menit lalu muat ulang halaman (Refresh).'
+            'message': 'Pembaruan sedang diunduh (git pull). Harap tunggu sekitar 1-2 menit lalu muat ulang halaman (Refresh).'
         })
     except Exception as e:
         return jsonify({'success': False, 'error': f'Gagal menjalankan pembaruan: {str(e)}'}), 500

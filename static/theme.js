@@ -117,12 +117,24 @@ function applyBackground(bgValue) {
         cssBg = `${bgValue}`;
     }
 
+    const brightness = localStorage.getItem('dashboard_bg_brightness') || 100;
+
     styleEl.innerHTML = `
         body {
+            background: transparent !important;
+            min-height: 100vh !important;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
             background: ${cssBg} !important;
             background-size: cover !important;
+            background-position: center !important;
             background-attachment: fixed !important;
-            min-height: 100vh !important;
+            z-index: -2;
+            filter: brightness(${brightness}%);
+            pointer-events: none;
         }
     `;
 }

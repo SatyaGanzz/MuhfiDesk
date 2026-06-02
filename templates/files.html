@@ -457,10 +457,10 @@
                     <table class="fm-table">
                         <thead>
                             <tr>
-                                <th style="width:45%">Name</th>
-                                <th>Size</th>
+                                <th style="width:45%; cursor:pointer" onclick="toggleSort('name')">Name <i id="sort-icon-name" class="fa-solid fa-sort"></i></th>
+                                <th style="cursor:pointer" onclick="toggleSort('size')">Size <i id="sort-icon-size" class="fa-solid fa-sort"></i></th>
                                 <th>Permissions</th>
-                                <th>Modified</th>
+                                <th style="cursor:pointer" onclick="toggleSort('date')">Modified <i id="sort-icon-date" class="fa-solid fa-sort"></i></th>
                             </tr>
                         </thead>
                         <tbody id="file-list"></tbody>
@@ -473,27 +473,7 @@
                     <span id="status-path">/</span>
                 </div>
 
-                <!-- Detail Panel -->
-                <div class="fm-detail hidden" id="detail-panel">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem">
-                        <h4 id="detail-name" style="margin:0; word-break:break-all">-</h4>
-                        <button class="fm-btn" onclick="closeDetailPanel()" style="padding:0.3rem 0.5rem"><i
-                                class="fa-solid fa-xmark"></i></button>
-                    </div>
-                    <div class="fm-detail-row"><span>Type</span><span id="detail-type">-</span></div>
-                    <div class="fm-detail-row"><span>Size</span><span id="detail-size">-</span></div>
-                    <div class="fm-detail-row"><span>Modified</span><span id="detail-date">-</span></div>
-                    <div class="fm-detail-row"><span>Permissions</span><span id="detail-perm">-</span></div>
-                    <div class="fm-detail-row"><span>Owner (UID)</span><span id="detail-uid">-</span></div>
-                    <div class="fm-detail-row"><span>Group (GID)</span><span id="detail-gid">-</span></div>
-                    <div class="fm-detail-actions">
-                        <button class="fm-btn" onclick="openSelected()"><i class="fa-solid fa-folder-open"></i>
-                            Open</button>
-                        <button class="fm-btn" onclick="renameItem()"><i class="fa-solid fa-pen"></i> Rename</button>
-                        <button class="fm-btn" style="color:#ff6b6b" onclick="deleteItem()"><i
-                                class="fa-solid fa-trash"></i> Delete</button>
-                    </div>
-                </div>
+                <!-- Detail Panel Removed -->
             </div>
         </div>
 

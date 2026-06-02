@@ -15,7 +15,7 @@
 
 **MuhfiDesk** is a powerful and elegant server management dashboard designed to make managing your homelab or VPS as easy as a single click. Inspired by CasaOS, MuhfiDesk runs **bare-metal** on your system (no Docker required for the core dashboard), offering blazing-fast performance while still allowing you to deploy and manage hundreds of Dockerized applications through its built-in App Store.
 
-> ![Dashboard Screenshot](data/Screenshot%20(59).png)
+> ![Dashboard Screenshot](data/demo.png)
 
 ---
 

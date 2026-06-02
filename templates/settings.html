@@ -641,6 +641,26 @@
         .bg-preset:hover { transform: scale(1.12); }
         .bg-preset.active { border-color: #58a6ff; box-shadow: 0 0 0 2px rgba(88,166,255,0.35); }
 
+        .bg-swatches-img {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.8rem;
+            margin-bottom: 1.5rem;
+        }
+        .bg-preset-img {
+            width: 100%;
+            aspect-ratio: 16/9;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+            position: relative;
+            background-size: cover !important;
+            background-position: center !important;
+        }
+        .bg-preset-img:hover { transform: scale(1.05); }
+        .bg-preset-img.active { border-color: #58a6ff; box-shadow: 0 0 0 2px rgba(88,166,255,0.35); }
+
         /* ── Wallpaper dropzone ── */
         .wallpaper-dropzone {
             border: 2px dashed rgba(88,166,255,0.3);
@@ -749,6 +769,11 @@
             color: #a78bfa;
             font-weight: 600;
             white-space: nowrap;
+        }
+
+        /* ── Auto-save Hide Footers ── */
+        .card-footer:has(button[onclick^="save"]) {
+            display: none !important;
         }
     </style>
 </head>
@@ -923,7 +948,20 @@
 
                     <div class="form-row">
                         <!-- Left: Presets -->
-                        <div class="form-group">
+                        <div class="form-group" style="flex:1.2;">
+                            <div class="bg-section-title">Wallpapers</div>
+                            <div class="bg-swatches-img">
+                                <div class="bg-preset-img" data-bg="/static/wallpapers/WAL1.jpg" onclick="selectBgPreset(this)" style="background-image:url('/static/wallpapers/WAL1.jpg')" title="Wallpaper 1"></div>
+                                <div class="bg-preset-img" data-bg="/static/wallpapers/WAL2.jpg" onclick="selectBgPreset(this)" style="background-image:url('/static/wallpapers/WAL2.jpg')" title="Wallpaper 2"></div>
+                                <div class="bg-preset-img" data-bg="/static/wallpapers/WAL3.png" onclick="selectBgPreset(this)" style="background-image:url('/static/wallpapers/WAL3.png')" title="Wallpaper 3"></div>
+                                <div class="bg-preset-img" data-bg="/static/wallpapers/WAL4.jpg" onclick="selectBgPreset(this)" style="background-image:url('/static/wallpapers/WAL4.jpg')" title="Wallpaper 4"></div>
+                                <div class="bg-preset-img" data-bg="/static/wallpapers/WAL5.jpg" onclick="selectBgPreset(this)" style="background-image:url('/static/wallpapers/WAL5.jpg')" title="Wallpaper 5"></div>
+                                <div class="bg-preset-img" data-bg="/static/wallpapers/WAL6.jpg" onclick="selectBgPreset(this)" style="background-image:url('/static/wallpapers/WAL6.jpg')" title="Wallpaper 6"></div>
+                                <div class="bg-preset-img" data-bg="/static/wallpapers/WAL7.jpg" onclick="selectBgPreset(this)" style="background-image:url('/static/wallpapers/WAL7.jpg')" title="Wallpaper 7"></div>
+                                <div class="bg-preset-img" data-bg="/static/wallpapers/WAL8.jpg" onclick="selectBgPreset(this)" style="background-image:url('/static/wallpapers/WAL8.jpg')" title="Wallpaper 8"></div>
+                                <div class="bg-preset-img" data-bg="/static/wallpapers/WAL9.jpg" onclick="selectBgPreset(this)" style="background-image:url('/static/wallpapers/WAL9.jpg')" title="Wallpaper 9"></div>
+                            </div>
+
                             <div class="bg-section-title">Gradients</div>
                             <div class="bg-swatches">
                                 <div class="bg-preset" data-bg="linear-gradient(135deg,#1a1a2e,#16213e,#0f3460,#533483)" onclick="selectBgPreset(this)" style="background:linear-gradient(135deg,#1a1a2e,#0f3460,#533483)" title="Cosmic (Glass default)"></div>
@@ -989,6 +1027,17 @@
                                 </button>
                             </div>
                             <div class="form-hint" style="margin-top:0.5rem">Gambar dikompres otomatis &amp; disimpan di browser (localStorage).</div>
+
+                            <div style="margin-top:1.5rem">
+                                <div class="bg-section-title">Kecerahan Background</div>
+                                <div style="display:flex; align-items:center; gap:0.8rem; background:rgba(255,255,255,0.03); padding:0.6rem 1rem; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
+                                    <i class="fa-solid fa-moon" style="color:#8b949e; font-size:0.9rem"></i>
+                                    <input type="range" id="bg-brightness-slider" min="10" max="150" value="100" style="flex:1; accent-color:#58a6ff" oninput="previewBgBrightness(this.value)" onchange="saveBgBrightness(this.value)">
+                                    <i class="fa-solid fa-sun" style="color:#8b949e; font-size:0.9rem"></i>
+                                    <span id="bg-brightness-val" style="min-width:45px; text-align:right; font-size:0.85rem; font-weight:600; color:#58a6ff">100%</span>
+                                </div>
+                                <div class="form-hint" style="margin-top:0.3rem">Atur gelap/terangnya background agar teks lebih mudah dibaca.</div>
+                            </div>
 
                             <!-- Live preview -->
                             <div style="margin-top:1.2rem">
@@ -1525,28 +1574,35 @@
         }
 
         function performAutoUpdate() {
-            if (!confirm('Apakah Anda yakin ingin melakukan update otomatis? Dashboard akan berhenti sejenak selama proses berlangsung.')) {
-                return;
+            // Tampilkan custom modal konfirmasi update
+            const modal = document.getElementById('update-confirm-modal');
+            if (modal) {
+                modal.style.display = 'flex';
             }
+        }
+
+        function startUpdateProcess() {
+            // Sembunyikan modal konfirmasi
+            document.getElementById('update-confirm-modal').style.display = 'none';
 
             const btn = document.getElementById('btn-auto-update');
             if (btn) {
                 btn.disabled = true;
-                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengunduh & Rebuild...';
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengunduh & Restart...';
             }
 
             fetch('/api/perform-update', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: {
+                    'Content-Type': 'application/json'
+                }
             })
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    showMsg(data.message, 'success');
-                    // Automatically reload the page after 45 seconds to let docker rebuild
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 45000);
+                    alert(data.message);
+                    // Tunggu sebentar lalu reload halaman untuk melihat versi baru
+                    setTimeout(() => window.location.reload(), 5000);
                 } else {
                     if (btn) {
                         btn.disabled = false;
@@ -1953,7 +2009,7 @@
 
         // ===== BACKGROUND / WALLPAPER MANAGEMENT =====
         function initBackgroundUI() {
-            const savedBg = localStorage.getItem('dashboard_bg') || '#1b203d';
+            const savedBg = localStorage.getItem('dashboard_custom_bg') || localStorage.getItem('dashboard_bg') || '#1b203d';
             updateBgPreview(savedBg);
             highlightActiveBgPreset(savedBg);
 
@@ -2380,12 +2436,22 @@
             }
         }
 
+        function highlightActiveBgPreset(bg) {
+            document.querySelectorAll('.bg-preset, .bg-preset-img').forEach(p => {
+                if (p.dataset.bg === bg) p.classList.add('active');
+                else p.classList.remove('active');
+            });
+        }
+
         function selectBgPreset(el) {
-            document.querySelectorAll('.bg-preset').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.bg-preset, .bg-preset-img').forEach(p => p.classList.remove('active'));
             el.classList.add('active');
             const bg = el.dataset.bg;
             if (typeof setCustomBackground === 'function') setCustomBackground(bg);
             updateBgPreview();
+            
+            // Auto save the appearance
+            setTimeout(saveAppearance, 100);
         }
 
         function applyCustomColor() {
@@ -2408,33 +2474,37 @@
         function handleSettingsWallpaperUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
+
+            document.getElementById('wallpaper-name').textContent = `📄 ${file.name}`;
+            document.getElementById('wallpaper-name').style.display = 'block';
+
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function (e) {
                 const img = new Image();
-                img.onload = function() {
+                img.onload = function () {
                     const canvas = document.createElement('canvas');
                     const MAX_W = 1920, MAX_H = 1080;
-                    let {width, height} = img;
+                    let { width, height } = img;
                     if (width > MAX_W || height > MAX_H) {
-                        const ratio = Math.min(MAX_W/width, MAX_H/height);
-                        width = Math.round(width*ratio); height = Math.round(height*ratio);
+                        const ratio = Math.min(MAX_W / width, MAX_H / height);
+                        width = Math.round(width * ratio);
+                        height = Math.round(height * ratio);
                     }
-                    canvas.width = width; canvas.height = height;
-                    canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
                     let dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-                    if (dataUrl.length > 1_300_000) dataUrl = canvas.toDataURL('image/jpeg', 0.55);
-                    if (dataUrl.length > 1_300_000) dataUrl = canvas.toDataURL('image/jpeg', 0.35);
+                    if (dataUrl.length > 1_200_000) dataUrl = canvas.toDataURL('image/jpeg', 0.55);
+                    if (dataUrl.length > 1_200_000) dataUrl = canvas.toDataURL('image/jpeg', 0.35);
+
                     try {
-                        if (typeof setCustomBackground === 'function') setCustomBackground(dataUrl);
+                        setCustomBackground(dataUrl);
                         updateBgPreview();
-                        // Show filename
-                        const nameEl = document.getElementById('wallpaper-name');
-                        if (nameEl) {
-                            nameEl.style.display = 'flex';
-                            nameEl.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + file.name + ' berhasil dimuat!';
-                        }
-                    } catch(err) {
-                        alert('Gambar terlalu besar. Coba gambar yang lebih kecil.');
+                        showMsg('Wallpaper berhasil diupload dan disimpan di browser!', 'success');
+                    } catch (err) {
+                        showMsg('Gambar terlalu besar untuk localStorage.', 'error');
                     }
                 };
                 img.src = e.target.result;
@@ -2442,6 +2512,97 @@
             reader.readAsDataURL(file);
             event.target.value = '';
         }
+
+        // --- Brightness Control Functions ---
+        function previewBgBrightness(val) {
+            document.getElementById('bg-brightness-val').textContent = val + '%';
+            const styleEl = document.getElementById('global-theme-override');
+            if (styleEl) {
+                let previewStyle = document.getElementById('brightness-preview-style');
+                if (!previewStyle) {
+                    previewStyle = document.createElement('style');
+                    previewStyle.id = 'brightness-preview-style';
+                    document.head.appendChild(previewStyle);
+                }
+                previewStyle.innerHTML = `body::before { filter: brightness(${val}%) !important; }`;
+            }
+        }
+
+        function saveBgBrightness(val) {
+            localStorage.setItem('dashboard_bg_brightness', val);
+            const currentBg = localStorage.getItem('dashboard_custom_bg') || null;
+            const theme = localStorage.getItem('dashboard_theme') || 'glassmorphic';
+            if (typeof applyTheme === 'function') {
+                applyTheme(theme, currentBg);
+            }
+            const previewStyle = document.getElementById('brightness-preview-style');
+            if (previewStyle) previewStyle.remove();
+            
+            updateBgPreview();
+            showMsg('Kecerahan background disimpan', 'success');
+        }
+
+        function initBrightnessSlider() {
+            const savedBrightness = localStorage.getItem('dashboard_bg_brightness') || 100;
+            const slider = document.getElementById('bg-brightness-slider');
+            const valDisplay = document.getElementById('bg-brightness-val');
+            if (slider && valDisplay) {
+                slider.value = savedBrightness;
+                valDisplay.textContent = savedBrightness + '%';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initBrightnessSlider();
+            setupAutoSave();
+        });
+
+        // ─── AUTO SAVE ───
+        function setupAutoSave() {
+            // Bind 'change' events to input fields to trigger save functions automatically.
+            
+            // General Settings
+            document.querySelectorAll('#server-name, #timezone, #time-format, #date-format, #language').forEach(el => {
+                el.addEventListener('change', saveGeneral);
+            });
+            
+            // Appearance Theme - auto saved via setTheme() already.
+            
+            // Monitoring
+            document.querySelectorAll('#wallboard-interval, #metrics-interval, #metrics-history, #default-page').forEach(el => {
+                el.addEventListener('change', saveMonitoring);
+            });
+
+            // Alerts
+            document.querySelectorAll('#cpu-warning, #cpu-critical, #ram-warning, #ram-critical, #disk-warning, #disk-critical').forEach(el => {
+                el.addEventListener('change', saveAlerts);
+            });
+            // The toggleAlerts function needs to call saveAlerts manually since it's a custom toggle
+            
+            // Telegram
+            document.querySelectorAll('#tg-enabled, #tg-bot-token, #tg-chat-id, #tg-interval, #tg-cpu-threshold, #tg-ram-threshold, #tg-alert-docker, #tg-alert-brute, #tg-alert-backup').forEach(el => {
+                el.addEventListener('change', saveTelegram);
+            });
+
+            // MQTT
+            document.querySelectorAll('#mqtt-broker, #mqtt-port, #mqtt-user, #mqtt-pass, #mqtt-devices').forEach(el => {
+                el.addEventListener('change', saveMqtt);
+            });
+        }
+
+        // --- Custom Toggle Overrides to trigger auto-save ---
+        const originalToggleAlerts = toggleAlerts;
+        toggleAlerts = function() {
+            originalToggleAlerts();
+            setTimeout(saveAlerts, 100);
+        };
+        const originalToggleMqtt = toggleMqtt;
+        toggleMqtt = function() {
+            originalToggleMqtt();
+            setTimeout(saveMqtt, 100);
+        };
+
+        // ─── INIT SETTINGS ───
 
         function handleDropZone(event) {
             event.preventDefault();
