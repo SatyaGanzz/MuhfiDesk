@@ -71,9 +71,9 @@ const THEMES = {
 };
 
 const DEFAULT_BG = {
-    dark:          '#0f1117',
+    dark:          '/static/wallpapers/WAL9.jpg',
     light:         'linear-gradient(135deg, #e0e7ef 0%, #f0f4f8 100%)',
-    glassmorphic:  'linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 70%, #533483 100%)'
+    glassmorphic:  '/static/wallpapers/WAL9.jpg'
 };
 
 // ─── Core apply functions ────────────────────────────────────────────────────

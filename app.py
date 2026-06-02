@@ -79,6 +79,7 @@ def energy_monitor_loop():
     except:
         pass
         
+    last_save = 0
     while True:
         try:
             # Estimate: Base 6W (Idle) + (CPU% * 6W / 100) -> Range 6W - 12W (Max 12V 1A)
@@ -88,18 +89,24 @@ def energy_monitor_loop():
             # Add to kWh
             TOTAL_KWH += watts / 3600000.0
             
-            # Save occasionally
-            if int(time.time()) % 60 == 0:
+            # Save occasionally (every 60 seconds)
+            now = time.time()
+            if now - last_save >= 60:
                 with open(ENERGY_FILE, 'w') as f:
                     json.dump({'kwh': TOTAL_KWH}, f)
-                    
+                last_save = now
+                
             time.sleep(1)
-        except:
+        except Exception as e:
+            print("Energy calc error:", e)
             time.sleep(1)
 
 # Start Energy Thread
 t_energy = threading.Thread(target=energy_monitor_loop, daemon=True)
 t_energy.start()
+
+# Start Telegram Monitoring Thread
+telegram_notifier.start_monitoring_thread()
 try:
     import paho.mqtt.client as mqtt
 except ImportError:
@@ -967,7 +974,7 @@ def metrics_api():
 
     return jsonify({
         'power': {
-            'kwh': f"{TOTAL_KWH:.4f}",
+            'kwh': f"{TOTAL_KWH:.6f}",
             'watts_est': int(watts_now)
         },
         'cpu': {
