@@ -100,8 +100,8 @@ if command -v systemctl >/dev/null 2>&1 && pidof systemd >/dev/null 2>&1; then
 else
     echo "⚠️ 'systemd' is not running (likely inside a container or WSL)."
     echo "✅ MuhfiDesk successfully installed!"
-    echo "🔄 To start the dashboard manually, run:"
-    echo "   cd $INSTALL_DIR && sudo .venv/bin/python app.py"
-    echo "🌐 Then access your dashboard at: http://localhost:$PORT"
+    echo "🔄 Starting MuhfiDesk dashboard in the background..."
+    nohup $INSTALL_DIR/.venv/bin/python $INSTALL_DIR/app.py > $INSTALL_DIR/app.log 2>&1 &
+    echo "🌐 Dashboard is now running! Access it at: http://localhost:$PORT"
     echo "==========================================================="
 fi
