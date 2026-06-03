@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <!-- xterm.js -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
@@ -24,41 +25,9 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            background: radial-gradient(circle at 10% 20%, rgb(14, 26, 40) 0%, rgb(8, 14, 21) 90%);
             min-height: 100vh;
             color: #fff;
             overflow: hidden; /* Prevent body scroll */
-        }
-
-        /* Abstract glowing background blobs */
-        body::before {
-            content: '';
-            position: absolute;
-            top: -10%;
-            left: -10%;
-            width: 40vw;
-            height: 40vw;
-            background: radial-gradient(circle, rgba(85,239,196,0.1) 0%, transparent 70%);
-            z-index: -1;
-            filter: blur(40px);
-            animation: float 10s ease-in-out infinite alternate;
-        }
-        body::after {
-            content: '';
-            position: absolute;
-            bottom: -10%;
-            right: -10%;
-            width: 50vw;
-            height: 50vw;
-            background: radial-gradient(circle, rgba(116,185,255,0.08) 0%, transparent 70%);
-            z-index: -1;
-            filter: blur(50px);
-            animation: float 12s ease-in-out infinite alternate-reverse;
-        }
-
-        @keyframes float {
-            0% { transform: translateY(0px) scale(1); }
-            100% { transform: translateY(20px) scale(1.05); }
         }
 
         .container {

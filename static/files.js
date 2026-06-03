@@ -334,15 +334,26 @@ function renderTable(items, isNew) {
         tr.oncontextmenu = (e) => showContextMenu(e, item, tr);
 
         let iconClass = item.is_dir ? 'fa-folder dir' : 'fa-file file';
+        let iconColor = item.is_dir ? '#FF9966' : '#a0a0b0';
+        
         if (!item.is_dir) {
-            if (item.name.match(/\.(py|js|html|css|json|xml|sh)$/i)) iconClass = 'fa-file-code file';
-            else if (item.name.match(/\.(txt|log|md|conf)$/i)) iconClass = 'fa-file-lines file';
-            else if (item.name.match(/\.(png|jpg|jpeg|gif|svg)$/i)) iconClass = 'fa-file-image file';
-            else if (item.name.match(/\.(zip|tar|gz|7z)$/i)) iconClass = 'fa-file-zipper file';
+            const extMatch = item.name.match(/\.([^.]+)$/);
+            const ext = extMatch ? extMatch[1].toLowerCase() : '';
+            
+            if (['py', 'js', 'html', 'css', 'json', 'xml', 'sh', 'php', 'c', 'cpp', 'java'].includes(ext)) { iconClass = 'fa-file-code file'; iconColor = '#58a6ff'; }
+            else if (['txt', 'log', 'md', 'conf', 'ini'].includes(ext)) { iconClass = 'fa-file-lines file'; iconColor = '#8b949e'; }
+            else if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico'].includes(ext)) { iconClass = 'fa-file-image file'; iconColor = '#ee7752'; }
+            else if (['zip', 'tar', 'gz', '7z', 'rar'].includes(ext)) { iconClass = 'fa-file-zipper file'; iconColor = '#e3b341'; }
+            else if (['doc', 'docx'].includes(ext)) { iconClass = 'fa-file-word file'; iconColor = '#2b579a'; }
+            else if (['xls', 'xlsx', 'csv'].includes(ext)) { iconClass = 'fa-file-excel file'; iconColor = '#217346'; }
+            else if (['ppt', 'pptx'].includes(ext)) { iconClass = 'fa-file-powerpoint file'; iconColor = '#b7472a'; }
+            else if (['pdf'].includes(ext)) { iconClass = 'fa-file-pdf file'; iconColor = '#da0b20'; }
+            else if (['mp4', 'mkv', 'avi', 'mov'].includes(ext)) { iconClass = 'fa-file-video file'; iconColor = '#e73c7e'; }
+            else if (['mp3', 'wav', 'ogg', 'flac'].includes(ext)) { iconClass = 'fa-file-audio file'; iconColor = '#23a6d5'; }
         }
 
         tr.innerHTML = `
-            <td><span class="fm-icon ${item.is_dir ? 'dir' : 'file'}"><i class="fa-solid ${iconClass.split(' ')[0]}"></i></span>${item.name}</td>
+            <td><span class="fm-icon ${item.is_dir ? 'dir' : 'file'}"><i class="fa-solid ${iconClass.split(' ')[0]}" style="color: ${iconColor}"></i></span>${item.name}</td>
             <td>${item.size}</td>
             <td style="font-family:monospace; color:#888">${item.perm || '-'}</td>
             <td style="color:var(--text-muted)">${item.date}</td>

@@ -1305,7 +1305,7 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label>Bot Token</label>
-                                <input type="password" id="tg-bot-token" placeholder="Your Bot Token">
+                                <input type="text" id="tg-bot-token" placeholder="Your Bot Token">
                                 <div class="form-hint">Dapatkan dari <a href="https://t.me/BotFather" target="_blank" style="color:#29a9eb">@BotFather</a> di Telegram</div>
                             </div>
                             <div class="form-group">
@@ -2259,9 +2259,10 @@
                     updateToggleSwitch(enabledCb);
 
                     if (data.bot_token_masked && data.bot_token_masked !== '***') {
-                        document.getElementById('tg-bot-token').placeholder = data.bot_token_masked;
+                        document.getElementById('tg-bot-token').value = data.bot_token_masked;
                         document.getElementById('tg-token-status').innerHTML = '<i class="fa-solid fa-circle-check" style="color:#3fb950"></i> Token sudah terkonfigurasi';
                     } else {
+                        document.getElementById('tg-bot-token').value = '';
                         document.getElementById('tg-bot-token').placeholder = 'Masukkan Bot Token dari @BotFather';
                         document.getElementById('tg-token-status').innerHTML = '<i class="fa-solid fa-circle-xmark" style="color:#f85149"></i> Token belum terkonfigurasi';
                     }
@@ -2329,9 +2330,9 @@
                 alert_backup: document.getElementById('tg-alert-backup').checked
             };
 
-            // Only send bot_token if user entered a new one
+            // Only send bot_token if user entered a new one (doesn't contain stars)
             const tokenInput = document.getElementById('tg-bot-token').value.trim();
-            if (tokenInput) {
+            if (tokenInput && !tokenInput.includes('*')) {
                 data.bot_token = tokenInput;
             }
 
@@ -2343,11 +2344,9 @@
             .then(r => r.json())
             .then(result => {
                 if (result.success) {
-                    showMsg('Telegram config saved!', 'success');
-                    // Reload to update masked token
+                    showMsg('✅ Saved!', 'success');
+                    // Reload to update masked token if changed
                     loadTelegramConfig();
-                    // Clear token input
-                    document.getElementById('tg-bot-token').value = '';
                 } else {
                     showMsg('Error: ' + (result.error || 'Failed'), 'error');
                 }
@@ -2586,8 +2585,18 @@
             // The toggleAlerts function needs to call saveAlerts manually since it's a custom toggle
             
             // Telegram
-            document.querySelectorAll('#tg-enabled, #tg-bot-token, #tg-chat-id, #tg-interval, #tg-cpu-threshold, #tg-ram-threshold, #tg-alert-docker, #tg-alert-brute, #tg-alert-backup').forEach(el => {
+            document.querySelectorAll('#tg-enabled, #tg-interval, #tg-cpu-threshold, #tg-ram-threshold, #tg-alert-docker, #tg-alert-brute, #tg-alert-backup').forEach(el => {
                 el.addEventListener('change', saveTelegram);
+            });
+            // Auto-save bot token & chat id on blur (when user clicks away / finishes typing)
+            ['tg-bot-token', 'tg-chat-id'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('blur', () => {
+                        // Only save if the field has a value
+                        if (el.value.trim()) saveTelegram();
+                    });
+                }
             });
 
             // MQTT
