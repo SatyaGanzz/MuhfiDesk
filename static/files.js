@@ -161,9 +161,20 @@ function buildSidebarTree() {
                 const icon = folder.icon || 'fa-folder';
                 const label = isSub ? folder.name.split('/').pop() : folder.name;
 
+                // Set icon colors dynamically
+                let iconColor = '#FF9966'; // default folder color
+                if (icon.includes('fa-hard-drive')) iconColor = '#23a6d5';
+                if (icon.includes('fa-home')) iconColor = '#a78bfa';
+                if (icon.includes('fa-desktop')) iconColor = '#58a6ff';
+                if (icon.includes('fa-download')) iconColor = '#4ecdc4';
+                if (icon.includes('fa-file')) iconColor = '#888';
+                if (icon.includes('fa-music')) iconColor = '#e73c7e';
+                if (icon.includes('fa-video')) iconColor = '#ffe66d';
+                if (icon.includes('fa-image')) iconColor = '#ee7752';
+
                 div.style.paddingLeft = isSub ? '1.8rem' : '';
                 div.title = folder.path; // Tooltip shows full path on hover
-                div.innerHTML = `<i class="fa-solid ${icon}" style="width:16px;text-align:center"></i> ${label}`;
+                div.innerHTML = `<i class="fa-solid ${icon}" style="color:${iconColor}; width:16px;text-align:center"></i> ${label}`;
                 div.onclick = () => loadFiles(folder.path);
                 container.appendChild(div);
             });
@@ -186,7 +197,7 @@ function buildSidebarTree() {
                 const div = document.createElement('div');
                 div.className = 'tree-item';
                 div.dataset.path = drive.mountpoint;
-                div.innerHTML = `<i class="fa-solid fa-hard-drive"></i> ${drive.mountpoint}`;
+                div.innerHTML = `<i class="fa-solid fa-hard-drive" style="color:#23a6d5; width:16px; text-align:center"></i> ${drive.mountpoint}`;
                 div.onclick = () => loadFiles(drive.mountpoint);
                 container.appendChild(div);
             });

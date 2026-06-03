@@ -17,7 +17,8 @@ from datetime import datetime, timedelta
 
 # ─── Config File ──────────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(BASE_DIR, 'data')
+ROOT_DIR = os.path.dirname(BASE_DIR)
+DATA_DIR = os.path.join(ROOT_DIR, 'data')
 TELEGRAM_CONFIG_FILE = os.path.join(DATA_DIR, 'telegram_config.json')
 
 # ─── Defaults ─────────────────────────────────────────────────

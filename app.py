@@ -101,12 +101,7 @@ def energy_monitor_loop():
             print("Energy calc error:", e)
             time.sleep(1)
 
-# Start Energy Thread
-t_energy = threading.Thread(target=energy_monitor_loop, daemon=True)
-t_energy.start()
 
-# Start Telegram Monitoring Thread
-telegram_notifier.start_monitoring_thread()
 try:
     import paho.mqtt.client as mqtt
 except ImportError:
@@ -124,6 +119,15 @@ app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB Limit
 # ==============================================
 CORS(app, supports_credentials=True)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+
+# Start background threads only in the main worker process
+if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or ('debug=True' not in open(__file__).read() and not os.environ.get('FLASK_DEBUG')):
+    # Start Energy Thread
+    t_energy = threading.Thread(target=energy_monitor_loop, daemon=True)
+    t_energy.start()
+
+    # Start Telegram Monitoring Thread
+    telegram_notifier.start_monitoring_thread()
 
 # Terminal sessions storage
 terminal_sessions = {}
