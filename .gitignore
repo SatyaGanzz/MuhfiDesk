@@ -9,6 +9,7 @@ venv/
 # Ignore all user data, logs, and databases
 data/*
 !data/app_catalog.json
+!data/app_settings.json
 *.db
 *.log
 *.zip
