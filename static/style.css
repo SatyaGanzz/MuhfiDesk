@@ -48,6 +48,9 @@
 }
 
 /* ─── Body ───────────────────────────────────────────────────────── */
+html {
+    background-color: var(--bg-base, #0f1117);
+}
 body {
     font-family: 'Inter', sans-serif;
     color: var(--text-main);

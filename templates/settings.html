@@ -776,6 +776,7 @@
             display: none !important;
         }
     </style>
+    <script src="{{ url_for('static', filename='theme.js') }}"></script>
 </head>
 
 <body>
@@ -2344,7 +2345,7 @@
             .then(r => r.json())
             .then(result => {
                 if (result.success) {
-                    showMsg('✅ Saved!', 'success');
+                    showMsg('Saved!', 'success');
                     // Reload to update masked token if changed
                     loadTelegramConfig();
                 } else {
@@ -2710,7 +2711,7 @@
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='theme.js') }}"></script>
 </body>
 
 </html>
+

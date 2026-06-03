@@ -91,6 +91,7 @@
         .loading { text-align: center; padding: 4rem; color: var(--text-muted); }
         @media(max-width:768px){ .page-wrap{ padding: 1rem; } .partition-stats{ gap: 0.8rem; } }
     </style>
+    <script src="{{ url_for('static', filename='theme.js') }}"></script>
 </head>
 <body>
 <div class="wallpaper"></div>
@@ -209,6 +210,5 @@ fetchStorage();
 setInterval(fetchStorage, 15000);
 </script>
 
-    <script src="{{ url_for('static', filename='theme.js') }}"></script>
 </body>
 </html>

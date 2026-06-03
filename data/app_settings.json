@@ -1,0 +1,70 @@
+{
+  "general": {
+    "server_name": "MuhfiDesk",
+    "timezone": "Asia/Jakarta",
+    "time_format": "24h",
+    "date_format": "DD/MM/YYYY",
+    "language": "en"
+  },
+  "appearance": {
+    "accent_color": "blue",
+    "density": "comfortable",
+    "visible_cards": [
+      "cpu",
+      "ram",
+      "disk",
+      "network",
+      "docker"
+    ]
+  },
+  "monitoring": {
+    "wallboard_interval": 2000,
+    "metrics_interval": 5000,
+    "metrics_history_minutes": 60,
+    "default_page": "dashboard"
+  },
+  "alerts": {
+    "enabled": true,
+    "cpu_warning": 70,
+    "cpu_critical": 90,
+    "ram_warning": 70,
+    "ram_critical": 90,
+    "disk_warning": 80,
+    "disk_critical": 95
+  },
+  "integrations": {
+    "telegram_enabled": false,
+    "telegram_token": "",
+    "telegram_chat_id": "",
+    "webhook_enabled": false,
+    "webhook_url": ""
+  },
+  "services": [
+    {
+      "id": "ssh",
+      "name": "SSH Server"
+    },
+    {
+      "id": "docker",
+      "name": "Docker Engine"
+    },
+    {
+      "id": "cron",
+      "name": "Cron Job"
+    },
+    {
+      "id": "gunicorn",
+      "name": "Gunicorn Service"
+    },
+    {
+      "id": "python-app",
+      "name": "Python App Service"
+    }
+  ],
+  "mqtt": {
+    "enabled": false,
+    "broker": "",
+    "port": 1883,
+    "devices": []
+  }
+}

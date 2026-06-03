@@ -135,6 +135,7 @@
         }
         @media(max-width:768px){ .page-wrap{ padding: 1rem; } .container-stats{ display: none; } }
     </style>
+    <script src="{{ url_for('static', filename='theme.js') }}"></script>
 </head>
 <body>
 <div class="wallpaper"></div>
@@ -304,6 +305,6 @@ fetchContainers();
 setInterval(fetchContainers, 8000);
 </script>
 
-    <script src="{{ url_for('static', filename='theme.js') }}"></script>
 </body>
 </html>
+

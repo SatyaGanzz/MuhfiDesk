@@ -79,15 +79,28 @@ const DEFAULT_BG = {
 // ─── Core apply functions ────────────────────────────────────────────────────
 
 function applyThemeVars(themeName) {
-    const vars = THEMES[themeName];
-    if (!vars) return;
+    const vars = THEMES[themeName] || THEMES.dark;
     const root = document.documentElement;
-    for (const [prop, val] of Object.entries(vars)) {
-        root.style.setProperty(prop, val);
+    for (const [key, val] of Object.entries(vars)) {
+        root.style.setProperty(key, val);
     }
-    // Mark body with theme class
-    document.body.classList.remove('theme-dark', 'theme-light', 'theme-glassmorphic');
-    document.body.classList.add(`theme-${themeName}`);
+    
+    // Prevent white flash while wallpaper loads
+    if (themeName === 'light') {
+        root.style.backgroundColor = '#f0f4f8';
+    } else {
+        root.style.backgroundColor = '#0f1117';
+    }
+
+    // Also update body classes so specific rules (like light mode overrides) work properly
+    if (document.body) {
+        document.body.className = `theme-${themeName}`;
+    } else {
+        // If body not ready yet, wait for DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', () => {
+            document.body.className = `theme-${themeName}`;
+        });
+    }
 }
 
 function applyBackground(bgValue) {
