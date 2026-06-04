@@ -478,7 +478,7 @@
                     <i class="fa-solid fa-bolt"></i> CONNECT SERIAL
                 </button>
                 <button class="quick-btn system" style="border-color: rgba(85, 239, 196, 0.3); color: #55efc4"
-                    onclick="quickCmd('muhfidesk update')">
+                    onclick="quickCmd('sudo muhfidesk update')">
                     <img src="/static/favicon.svg" style="width: 14px; height: 14px; filter: brightness(0) saturate(100%) invert(86%) sepia(35%) saturate(543%) hue-rotate(97deg) brightness(101%) contrast(92%);"> UPDATE MUHFIDESK
                 </button>
             </div>
@@ -673,9 +673,12 @@ Restart App=systemctl restart myapp"></textarea>
 
             activeTab = sessionId;
 
-            if (terminals[sessionId]) {
+            if (terminals[sessionId] && terminals[sessionId].term.element) {
                 terminals[sessionId].term.focus();
-                terminals[sessionId].fitAddon.fit();
+                // requestAnimationFrame helps ensure DOM is updated before fitting
+                requestAnimationFrame(() => {
+                    try { terminals[sessionId].fitAddon.fit(); } catch(e) {}
+                });
             }
         }
 
