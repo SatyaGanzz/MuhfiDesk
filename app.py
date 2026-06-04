@@ -5033,13 +5033,48 @@ def install_worker(app_id, config, username):
 # ================= APP MANAGER ROUTES =================
 # /apps route removed as requested, features moved to /docker
 
+def resolve_docker_container(client, app_id):
+    """Find a Docker container from dashboard id, app id, or container name."""
+    if not app_id:
+        raise ValueError("Container id is required")
+
+    raw_id = str(app_id).strip()
+    normalized_id = raw_id[7:] if raw_id.startswith('docker_') else raw_id
+    candidates = []
+
+    def add_candidate(value):
+        if value and value not in candidates:
+            candidates.append(value)
+
+    add_candidate(raw_id)
+    add_candidate(normalized_id)
+
+    installed_apps = load_installed_apps()
+    for app in installed_apps:
+        app_catalog_id = app.get('id')
+        container_name = app.get('container_name')
+        if normalized_id in (app_catalog_id, container_name) or raw_id in (app_catalog_id, container_name, f"docker_{container_name}"):
+            add_candidate(container_name)
+
+    if not normalized_id.startswith('muhfi_'):
+        add_candidate(f"muhfi_{normalized_id}")
+
+    last_error = None
+    for candidate in candidates:
+        try:
+            return client.containers.get(candidate)
+        except Exception as e:
+            last_error = e
+
+    raise Exception(f"Container not found: {app_id}") from last_error
+
 @app.route('/api/apps/details/<app_id>')
 @login_required
 @requires_permission('docker', 'view')
 def app_details(app_id):
     try:
         client = docker.from_env()
-        container = client.containers.get(app_id)
+        container = resolve_docker_container(client, app_id)
         
         # Parse Ports
         ports = []
@@ -5097,7 +5132,7 @@ def app_action():
     
     try:
         client = docker.from_env()
-        container = client.containers.get(app_id)
+        container = resolve_docker_container(client, app_id)
         
         if action == 'start': container.start()
         elif action == 'stop': container.stop()
@@ -5106,15 +5141,15 @@ def app_action():
             container.remove(force=True)
             # Remove from installed_apps.json
             try:
-                remove_installed_app(app_id)
-                print(f"DEBUG: Removed {app_id} from installed_apps.json")
+                remove_installed_app(container.name)
+                print(f"DEBUG: Removed {container.name} from installed_apps.json")
             except Exception as e:
                 print(f"WARNING: Failed to remove from installed_apps.json: {e}")
             # Remove from user_catalog if exists
             if os.path.exists(USER_CATALOG_FILE):
                  try:
                      with open(USER_CATALOG_FILE) as f: user_apps = json.load(f)
-                     user_apps = [a for a in user_apps if a['id'] != app_id] # Filter out
+                     user_apps = [a for a in user_apps if a.get('id') not in (app_id, container.name)] # Filter out
                      with open(USER_CATALOG_FILE, 'w') as f: json.dump(user_apps, f, indent=4)
                  except: pass
 
@@ -5138,13 +5173,14 @@ def update_app_config():
     
     try:
         client = docker.from_env()
-        old_container = client.containers.get(app_id)
+        old_container = resolve_docker_container(client, app_id)
+        container_name = old_container.name
         
         # 1. Capture existing config
         image = old_container.attrs['Config']['Image']
-        env_vars = old_container.attrs['Config']['Env']
+        env_vars = old_container.attrs['Config'].get('Env') or []
         # Helper to convert list ["K=V"] to dict {K:V}
-        environment = {e.split('=',1)[0]: e.split('=',1)[1] for e in env_vars}
+        environment = {e.split('=',1)[0]: e.split('=',1)[1] for e in env_vars if '=' in e}
         
         volumes = old_container.attrs['HostConfig']['Binds'] # List of binds
         # Convert binds to dict for run command: {'/host': {'bind': '/cont', 'mode': 'rw'}}
@@ -5166,14 +5202,15 @@ def update_app_config():
                      ports_dict[c_port] = int(p['host'])
         
         # 3. Recreate
-        print(f"DEBUG: Recreating {app_id} with Network: {new_network}, Ports: {ports_dict}")
+        print(f"DEBUG: Recreating {container_name} with Network: {new_network}, Ports: {ports_dict}")
         
-        old_container.stop()
+        if old_container.status == 'running':
+            old_container.stop()
         old_container.remove()
         
         client.containers.run(
             image,
-            name=app_id,
+            name=container_name,
             ports=ports_dict,
             volumes=vols_dict,
             environment=environment,
@@ -5182,7 +5219,16 @@ def update_app_config():
             detach=True
         )
         
-        return jsonify({'success': True})
+        installed_apps = load_installed_apps()
+        for app in installed_apps:
+            if app.get('container_name') == container_name:
+                app['ports'] = new_ports or []
+                app['network_mode'] = new_network
+                break
+        with open(INSTALLED_APPS_FILE, 'w') as f:
+            json.dump(installed_apps, f, indent=4)
+
+        return jsonify({'success': True, 'container_name': container_name})
 
     except Exception as e:
         print(f"Update failed: {e}")
@@ -5204,22 +5250,11 @@ def manage_app_endpoint():
             
         client = docker.from_env()
         
-        # Determine container name
-        # Try finding by name "muhfi_{id}" or just id if custom
-        container = None
         try:
-             container = client.containers.get(f"muhfi_{app_id}")
-        except:
-             try:
-                 container = client.containers.get(app_id) # maybe custom name
-             except:
-                 pass
-        
-        # If still not found, try searching by image or loosely?
-        if not container:
-             # Try catalog lookup to be sure of container name?
-             # For now assume 'eka_{app_id}' is standard
-             return jsonify({'error': 'Container not found'}), 404
+            container = resolve_docker_container(client, app_id)
+        except Exception:
+            return jsonify({'error': 'Container not found'}), 404
+        container_name = container.name
              
         if action == 'start':
             container.start()
@@ -5247,18 +5282,17 @@ def manage_app_endpoint():
             else:
                 container.restart()
         elif action == 'uninstall':
-            container.stop()
-            container.remove()
+            container.remove(force=True)
             # Remove from user_apps.json if there
             if os.path.exists(USER_CATALOG_FILE):
                 try:
                     with open(USER_CATALOG_FILE, 'r') as f: apps = json.load(f)
-                    apps = [a for a in apps if a['id'] != app_id and a['name'] != app_id] # simplistic filter
+                    apps = [a for a in apps if a.get('id') not in (app_id, container_name) and a.get('name') not in (app_id, container_name)]
                     with open(USER_CATALOG_FILE, 'w') as f: json.dump(apps, f, indent=4)
                 except: pass
             
             # Remove from installed_apps.json
-            remove_installed_app(app_id)
+            remove_installed_app(container_name)
             
         audit_log('APP_MANAGE', f"{action.title()} app {app_id}", session.get('username'))
         return jsonify({'success': True})
@@ -5623,37 +5657,35 @@ def manage_app():
         if not app_id or not action:
             return jsonify({'error': 'Invalid request'}), 400
             
-        container_name = app_id
+        client = docker.from_env()
+        try:
+            container = resolve_docker_container(client, app_id)
+        except Exception:
+            return jsonify({'error': 'Container not found'}), 404
+        container_name = container.name
         
         if action == 'uninstall':
-            subprocess.run(['docker', 'rm', '-f', container_name], capture_output=True)
+            container.remove(force=True)
             
             # Remove from installed_apps.json
             try:
-                if os.path.exists(INSTALLED_APPS_FILE):
-                    with open(INSTALLED_APPS_FILE, 'r') as f:
-                        installed = json.load(f)
-                    
-                    if app_id in installed:
-                        del installed[app_id]
-                        with open(INSTALLED_APPS_FILE, 'w') as f:
-                            json.dump(installed, f, indent=4)
+                remove_installed_app(container_name)
             except Exception as e:
                 print(f"Failed to remove from installed apps: {e}")
                 
-            msg = f"{app_id} uninstalled"
+            msg = f"{container_name} uninstalled"
             
         elif action == 'start':
-            subprocess.run(['docker', 'start', container_name], capture_output=True)
-            msg = f"{app_id} started"
+            container.start()
+            msg = f"{container_name} started"
             
         elif action == 'stop':
-            subprocess.run(['docker', 'stop', container_name], capture_output=True)
-            msg = f"{app_id} stopped"
+            container.stop()
+            msg = f"{container_name} stopped"
             
         elif action == 'restart':
-            subprocess.run(['docker', 'restart', container_name], capture_output=True)
-            msg = f"{app_id} restarted"
+            container.restart()
+            msg = f"{container_name} restarted"
             
         else:
             return jsonify({'error': 'Unknown action'}), 400

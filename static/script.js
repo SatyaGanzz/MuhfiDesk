@@ -631,6 +631,7 @@ function renderDashboardApps(apps) {
     grid.innerHTML = apps.map(app => {
         // Check if this is a Docker app
         const isDockerApp = app.type === 'docker';
+        const dockerTarget = app.container_name || app.id;
         const optionsMenu = isDockerApp ? `
             <div class="app-options" onclick="event.stopPropagation(); toggleAppOptions('${app.id}')">
                 <i class="fa-solid fa-ellipsis-vertical"></i>
@@ -639,10 +640,10 @@ function renderDashboardApps(apps) {
                 <div class="option-item" onclick="openDockerApp('${app.url}')">
                     <i class="fa-solid fa-external-link-alt"></i> Open
                 </div>
-                <div class="option-item" onclick="editDockerPort('${app.id}')">
+                <div class="option-item" onclick="editDockerPort('${dockerTarget}')">
                     <i class="fa-solid fa-pen-to-square"></i> Edit Port
                 </div>
-                <div class="option-item text-danger" onclick="uninstallDockerApp('${app.id}')">
+                <div class="option-item text-danger" onclick="uninstallDockerApp('${dockerTarget}')">
                     <i class="fa-solid fa-trash"></i> Uninstall
                 </div>
             </div>
@@ -896,10 +897,139 @@ function openDockerApp(url) {
     }
 }
 
-function editDockerPort(appId) {
-    // For now, this is a placeholder. 
-    // Implementing port editing requires backend changes to re-create the container.
-    alert('Fitur Edit Port untuk ' + appId + ' masih dalam pengembangan.');
+function ensureDockerPortModal() {
+    let modal = document.getElementById('docker-port-modal');
+    if (modal) return modal;
+
+    modal = document.createElement('div');
+    modal.id = 'docker-port-modal';
+    modal.className = 'modal-overlay';
+    modal.style.cssText = 'display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.55); align-items:center; justify-content:center; padding:1rem;';
+    modal.innerHTML = `
+        <div class="glass" style="width:min(520px, 100%); border-radius:14px; padding:1.25rem; color:var(--text-main); box-shadow:0 24px 80px rgba(0,0,0,0.45);">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; margin-bottom:1rem;">
+                <h3 style="margin:0; font-size:1.05rem; font-weight:700;">Edit Port: <span id="docker-port-title"></span></h3>
+                <button class="btn-icon" type="button" onclick="closeDockerPortModal()" title="Close" style="background:transparent; border:0; color:inherit; cursor:pointer;">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <input type="hidden" id="docker-port-app-id">
+            <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:0.35rem;">Network</label>
+            <select id="docker-port-network" onchange="handleDashboardDockerNetworkChange()" style="width:100%; margin-bottom:1rem; padding:0.7rem; border-radius:8px; border:1px solid rgba(255,255,255,0.16); background:rgba(15,23,42,0.92); color:#fff;">
+                <option value="bridge">Bridge</option>
+                <option value="host">Host</option>
+            </select>
+            <div id="docker-port-section">
+                <div id="docker-port-rows"></div>
+                <button class="btn secondary" type="button" onclick="addDashboardDockerPortRow()" style="margin-top:0.4rem;">
+                    <i class="fa-solid fa-plus"></i> Add Port
+                </button>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:0.75rem; margin-top:1.25rem;">
+                <button class="btn secondary" type="button" onclick="closeDockerPortModal()">Cancel</button>
+                <button class="btn success" type="button" id="docker-port-save-btn" onclick="saveDashboardDockerPorts()">Save & Restart</button>
+            </div>
+        </div>
+    `;
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) closeDockerPortModal();
+    });
+    document.body.appendChild(modal);
+    return modal;
+}
+
+function closeDockerPortModal() {
+    const modal = document.getElementById('docker-port-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+function handleDashboardDockerNetworkChange() {
+    const network = document.getElementById('docker-port-network').value;
+    const section = document.getElementById('docker-port-section');
+    section.style.display = network === 'host' ? 'none' : 'block';
+}
+
+function addDashboardDockerPortRow(container = '', host = '', protocol = 'tcp') {
+    const row = document.createElement('div');
+    row.className = 'dashboard-docker-port-row';
+    row.style.cssText = 'display:grid; grid-template-columns:1fr 1fr 92px 38px; gap:0.5rem; align-items:center; margin-bottom:0.6rem;';
+    row.innerHTML = `
+        <input class="docker-port-container" type="number" placeholder="Container" value="${container}" style="min-width:0; padding:0.65rem; border-radius:8px; border:1px solid rgba(255,255,255,0.14); background:rgba(15,23,42,0.92); color:#fff;">
+        <input class="docker-port-host" type="number" placeholder="Host" value="${host}" style="min-width:0; padding:0.65rem; border-radius:8px; border:1px solid rgba(255,255,255,0.14); background:rgba(15,23,42,0.92); color:#fff;">
+        <select class="docker-port-protocol" style="padding:0.65rem; border-radius:8px; border:1px solid rgba(255,255,255,0.14); background:rgba(15,23,42,0.92); color:#fff;">
+            <option value="tcp" ${protocol === 'tcp' ? 'selected' : ''}>TCP</option>
+            <option value="udp" ${protocol === 'udp' ? 'selected' : ''}>UDP</option>
+        </select>
+        <button class="btn danger" type="button" onclick="this.closest('.dashboard-docker-port-row').remove()" title="Remove" style="height:38px; padding:0;">
+            <i class="fa-solid fa-minus"></i>
+        </button>
+    `;
+    document.getElementById('docker-port-rows').appendChild(row);
+}
+
+async function editDockerPort(appId) {
+    const modal = ensureDockerPortModal();
+    const rows = document.getElementById('docker-port-rows');
+    rows.innerHTML = '<div style="padding:1rem; color:var(--text-muted);">Loading ports...</div>';
+    document.getElementById('docker-port-app-id').value = appId;
+    document.getElementById('docker-port-title').textContent = appId;
+    modal.style.display = 'flex';
+
+    try {
+        const response = await fetch(`/api/apps/details/${encodeURIComponent(appId)}`);
+        const details = await response.json();
+        if (!response.ok) throw new Error(details.error || 'Failed to load container details');
+
+        document.getElementById('docker-port-title').textContent = details.id || appId;
+        document.getElementById('docker-port-app-id').value = details.id || appId;
+        document.getElementById('docker-port-network').value = details.network_mode || 'bridge';
+        rows.innerHTML = '';
+        (details.ports || []).forEach(p => addDashboardDockerPortRow(p.container, p.host, p.protocol));
+        if (!details.ports || details.ports.length === 0) addDashboardDockerPortRow();
+        handleDashboardDockerNetworkChange();
+    } catch (error) {
+        rows.innerHTML = `<div style="padding:1rem; color:#ff6b6b;">${error.message}</div>`;
+    }
+}
+
+async function saveDashboardDockerPorts() {
+    const appId = document.getElementById('docker-port-app-id').value;
+    const networkMode = document.getElementById('docker-port-network').value;
+    const ports = [];
+
+    if (networkMode !== 'host') {
+        document.querySelectorAll('.dashboard-docker-port-row').forEach(row => {
+            const container = row.querySelector('.docker-port-container').value;
+            const host = row.querySelector('.docker-port-host').value;
+            const protocol = row.querySelector('.docker-port-protocol').value;
+            if (container && host) ports.push({ container, host, protocol });
+        });
+    }
+
+    const btn = document.getElementById('docker-port-save-btn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = 'Updating...';
+    btn.disabled = true;
+
+    try {
+        const response = await fetch('/api/apps/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: appId, network_mode: networkMode, ports })
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.error || 'Update failed');
+
+        closeDockerPortModal();
+        alert('Port berhasil diubah. Container sedang restart.');
+        loadDashboardApps();
+        if (typeof refreshDockerStatus === 'function') refreshDockerStatus();
+    } catch (error) {
+        alert('Gagal mengubah port: ' + error.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
 }
 
 async function uninstallDockerApp(appId) {
@@ -908,14 +1038,14 @@ async function uninstallDockerApp(appId) {
     }
     
     try {
-        const response = await fetch('/api/store/manage', {
+        const response = await fetch('/api/apps/action', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
+                id: appId,
                 action: 'uninstall',
-                app_id: appId
             })
         });
         
