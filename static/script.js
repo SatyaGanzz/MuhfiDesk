@@ -635,7 +635,7 @@ function renderDashboardApps(apps) {
             <div class="app-options" onclick="event.stopPropagation(); toggleAppOptions('${app.id}')">
                 <i class="fa-solid fa-ellipsis-vertical"></i>
             </div>
-            <div class="app-options-menu glass" id="options-menu-${app.id}" style="display: none;" onclick="event.stopPropagation();">
+            <div class="app-options-menu" id="options-menu-${app.id}" style="display: none;" onclick="event.stopPropagation();">
                 <div class="option-item" onclick="openDockerApp('${app.url}')">
                     <i class="fa-solid fa-external-link-alt"></i> Open
                 </div>

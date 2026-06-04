@@ -382,33 +382,40 @@ body.theme-glassmorphic .detail-card {
     position: absolute;
     top: 35px;
     right: 10px;
-    background: rgba(15, 23, 42, 0.95);
-    border: 1px solid rgba(255,255,255,0.1);
+    background: #1e293b; /* Solid dark background */
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255,255,255,0.15);
     border-radius: 8px;
     padding: 5px;
-    min-width: 120px;
+    min-width: 130px;
     z-index: 20;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+    color: #f1f5f9; /* Light text for readability */
 }
 
 .option-item {
-    padding: 8px 12px;
-    font-size: 0.85rem;
-    border-radius: 5px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    color: #f1f5f9;
 }
 .option-item:hover {
-    background: rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.15);
+    color: #ffffff;
 }
 .text-danger {
     color: #ef4444;
 }
 .text-danger:hover {
-    background: rgba(239, 68, 68, 0.1);
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
 }
 
 .app-icon {

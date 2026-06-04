@@ -260,7 +260,8 @@
         }
 
         .terminal-wrap.active {
-            display: block;
+            display: flex;
+            flex-direction: column;
             animation: fadeIn 0.3s ease;
         }
 
@@ -270,6 +271,7 @@
         }
 
         .terminal-wrap .xterm {
+            flex: 1;
             height: 100%;
         }
         
@@ -466,7 +468,7 @@
                         class="fa-solid fa-file-alt"></i> syslog</button>
             </div>
 
-            <!-- ESP32 -->
+            <!-- ESP32 & MuhfiDesk -->
             <div class="cmd-category">
                 <span class="cmd-category-label system" style="background:rgba(255, 107, 107, 0.15); color:#ff6b6b">
                     <i class="fa-solid fa-microchip"></i> ESP32
@@ -474,6 +476,10 @@
                 <button class="quick-btn system" style="border-color: rgba(255, 107, 107, 0.3); color: #ff9f9f"
                     onclick="quickCmd('export TERM=xterm && screen /dev/ttyACM1 115200')">
                     <i class="fa-solid fa-bolt"></i> CONNECT SERIAL
+                </button>
+                <button class="quick-btn system" style="border-color: rgba(85, 239, 196, 0.3); color: #55efc4"
+                    onclick="quickCmd('muhfidesk update')">
+                    <img src="/static/favicon.svg" style="width: 14px; height: 14px; filter: brightness(0) saturate(100%) invert(86%) sepia(35%) saturate(543%) hue-rotate(97deg) brightness(101%) contrast(92%);"> UPDATE MUHFIDESK
                 </button>
             </div>
 
@@ -607,21 +613,32 @@ Restart App=systemctl restart myapp"></textarea>
 
             const fitAddon = new FitAddon.FitAddon();
             term.loadAddon(fitAddon);
-            term.open(termWrap);
-            fitAddon.fit();
+            
+            // Store it BEFORE opening and fitting
+            terminals[sessionId] = { term, fitAddon, path, name: tabName };
+            
+            // Make it visible first by switching to it!
+            switchTab(sessionId);
 
-            // Handle resize
-            const resizeObserver = new ResizeObserver(() => {
+            // NOW open and fit since the wrapper is visible (display: flex)
+            term.open(termWrap);
+            // Give the browser a tiny moment to render the flex layout before fitting
+            requestAnimationFrame(() => {
                 fitAddon.fit();
-                if (terminals[sessionId]) {
-                    socket.emit('terminal_resize', {
-                        session_id: sessionId,
-                        rows: term.rows,
-                        cols: term.cols
-                    });
-                }
+                
+                // Handle resize
+                const resizeObserver = new ResizeObserver(() => {
+                    fitAddon.fit();
+                    if (terminals[sessionId]) {
+                        socket.emit('terminal_resize', {
+                            session_id: sessionId,
+                            rows: term.rows,
+                            cols: term.cols
+                        });
+                    }
+                });
+                resizeObserver.observe(termWrap);
             });
-            resizeObserver.observe(termWrap);
 
             // Handle input
             term.onData(data => {
@@ -633,17 +650,12 @@ Restart App=systemctl restart myapp"></textarea>
                 }
             });
 
-            // Store
-            terminals[sessionId] = { term, fitAddon, path, name: tabName };
-
             // Start terminal on server
             socket.emit('start_terminal', {
                 session_id: sessionId,
                 path: path,
                 lxd_target: lxdTarget
             });
-
-            switchTab(sessionId);
         }
 
         function saveTabName(sessionId, name) {
