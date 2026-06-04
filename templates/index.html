@@ -504,7 +504,7 @@
                 </div>
 
                 <!-- Web Monitor Widget -->
-                <div class="widget-card glass" onclick="openDockerStatusPanel()" style="cursor: pointer;">
+                <div class="widget-card glass">
                     <div class="widget-header">
                         <div class="icon-box" style="background:#2496ed; box-shadow:0 0 10px rgba(36, 150, 237, 0.3)">
                             <i class="fa-brands fa-docker"></i>
@@ -512,7 +512,7 @@
                         <h3>Docker Status</h3>
                     </div>
                     <div class="widget-body">
-                        <div class="power-stats" id="docker-status-widget">
+                        <div class="power-stats" id="docker-status-widget" style="align-items: stretch; text-align: left; width: 100%;">
                             <div style="text-align: center; color: #aaa;">
                                 <i class="fa-solid fa-spinner fa-spin"></i> Loading...
                             </div>
@@ -631,7 +631,6 @@
     </script>
     <script src="{{ url_for('static', filename='script.js') }}?v=11"></script>
 
-    
     <!-- 3D Tilt Effect Preview -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
     <script>
@@ -711,74 +710,7 @@
                 </div>
             `;
         }
-
-        function updateDockerPanel(containers) {
-            const panelBody = document.getElementById('docker-panel-body');
-            if (!panelBody) return;
-
-            if (containers.length === 0) {
-                panelBody.innerHTML = '<div class="docker-panel-empty">No containers found</div>';
-                return;
-            }
-
-            panelBody.innerHTML = containers.map(container => {
-                const isRunning = container.status === 'running';
-                const statusColor = isRunning ? 'running' : 'stopped';
-                const statusText = isRunning ? 'Running' : 'Stopped';
-
-                let iconName = 'docker';
-                if (container.image) {
-                    let imgParts = container.image.split(':')[0].split('/');
-                    iconName = imgParts[imgParts.length - 1];
-                }
-                if (iconName === 'portainer-ce' || iconName === 'agent') iconName = 'portainer';
-                if (iconName === 'pihole') iconName = 'pi-hole';
-                if (iconName === 'adguardhome') iconName = 'adguard-home';
-                
-                const iconUrl = `https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/${iconName}.svg`;
-
-                return `
-                    <div class="docker-container-item ${statusColor}">
-                        <div class="docker-status-icon ${statusColor}" style="background: rgba(255,255,255,0.05); overflow: hidden; display: flex; align-items: center; justify-content: center;">
-                            <img src="${iconUrl}" style="width: 16px; height: 16px; object-fit: contain;" onerror="this.onerror=null; this.outerHTML='<i class=\\'fa-brands fa-docker\\' style=\\'color: ${isRunning ? '#22c55e' : '#ef4444'};\\'></i>';">
-                        </div>
-                        <div class="docker-container-info">
-                            <div class="docker-container-name">${container.name}</div>
-                            <div class="docker-container-status">${container.image}</div>
-                            <div class="docker-container-status">Status: ${statusText}</div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function openDockerStatusPanel() {
-            const panel = document.getElementById('docker-panel');
-            if (panel) {
-                panel.classList.add('active');
-                refreshDockerStatus();
-            }
-        }
-
-        function closeDockerPanel() {
-            const panel = document.getElementById('docker-panel');
-            if (panel) {
-                panel.classList.remove('active');
-            }
-        }
-
-        // Close panel saat klik di luar
-        document.addEventListener('click', (e) => {
-            const panel = document.getElementById('docker-panel');
-            const widget = document.querySelector('[onclick="openDockerStatusPanel()"]');
-            
-            if (panel && !panel.contains(e.target) && !widget?.contains(e.target)) {
-                closeDockerPanel();
-            }
-        });
     </script>
-
-
 </body>
 
 </html>
