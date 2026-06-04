@@ -318,8 +318,37 @@ body.theme-glassmorphic .detail-card {
 
 .apps-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    grid-template-columns: repeat(9, 1fr);
     gap: 1.5rem;
+    justify-content: start;
+}
+
+/* Responsiveness for smaller screens */
+@media (max-width: 1400px) {
+    .apps-grid {
+        grid-template-columns: repeat(8, 1fr);
+    }
+}
+@media (max-width: 1200px) {
+    .apps-grid {
+        grid-template-columns: repeat(6, 1fr);
+    }
+}
+@media (max-width: 992px) {
+    .apps-grid {
+        grid-template-columns: repeat(5, 1fr);
+    }
+}
+@media (max-width: 768px) {
+    .apps-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+@media (max-width: 480px) {
+    .apps-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
 }
 
 .app-item {

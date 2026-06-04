@@ -5378,9 +5378,20 @@ def get_dashboard_apps():
                 host_ip = request.host.split(':')[0]
                 url = f"http://{host_ip}:{target_port}"
             
+            # Generate icon from Docker image name just like panel_docker
+            image_name = c.attrs.get('Config', {}).get('Image', '')
+            icon_name = 'docker'
+            if image_name:
+                parts = image_name.split(':')[0].split('/')
+                if parts:
+                    icon_name = parts[-1]
+            if icon_name in ['portainer-ce', 'agent']:
+                icon_name = 'portainer'
+            dynamic_icon = f"https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/{icon_name}.svg"
+            
             # Fallback nama dan icon
             display_name = meta.get('name', container_name)
-            icon_url = meta.get('icon', 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/docker.png')
+            icon_url = meta.get('icon', dynamic_icon)
             
             # Create dashboard item
             dashboard_item = {
