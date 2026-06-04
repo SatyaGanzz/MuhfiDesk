@@ -359,6 +359,56 @@ body.theme-glassmorphic .detail-card {
     padding: 2rem;
     cursor: pointer;
     gap: 1rem;
+    position: relative; /* For the options menu */
+}
+
+/* App Options Menu */
+.app-options {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: rgba(255,255,255,0.5);
+    padding: 5px;
+    border-radius: 5px;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+.app-options:hover {
+    color: white;
+    background: rgba(255,255,255,0.1);
+}
+
+.app-options-menu {
+    position: absolute;
+    top: 35px;
+    right: 10px;
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 5px;
+    min-width: 120px;
+    z-index: 20;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+}
+
+.option-item {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.option-item:hover {
+    background: rgba(255,255,255,0.1);
+}
+.text-danger {
+    color: #ef4444;
+}
+.text-danger:hover {
+    background: rgba(239, 68, 68, 0.1);
 }
 
 .app-icon {

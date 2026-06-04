@@ -56,45 +56,13 @@ Once installed, simply open your web browser and navigate to:
 
 ---
 
-## 🛠️ Manual Installation (For Developers)
-
-If you prefer to install MuhfiDesk manually or want to contribute to the project:
-
-1. **Clone the repository:**
-
-   ```bash
-   git clone https://github.com/SatyaGanzz/MuhfiDesk.git
-   cd MuhfiDesk
-   ```
-
-2. **Create a Python Virtual Environment:**
-
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-   ```
-
-3. **Install Dependencies:**
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Run the Dashboard:**
-   ```bash
-   python app.py
-   ```
-
----
-
 ## 📸 Screenshots Gallery
 
 <p align="center">
-  <img src="https://via.placeholder.com/400x250?text=App+Store+View" width="45%" />
-  <img src="https://via.placeholder.com/400x250?text=System+Monitoring" width="45%" />
+  <img src="data/demo4.png" width="45%" />
+  <img src="data/demo1.png" width="45%" />
+  <img src="data/demo2.png" width="45%" />
 </p>
-
-_(Replace these placeholders with actual screenshots of the App Store and Monitoring page by uploading your images to the repository and updating the links here)_
 
 ---
 

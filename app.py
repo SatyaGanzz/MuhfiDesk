@@ -5623,11 +5623,24 @@ def manage_app():
         if not app_id or not action:
             return jsonify({'error': 'Invalid request'}), 400
             
-        container_name = f"muhfi_{app_id}"
+        container_name = app_id
         
         if action == 'uninstall':
             subprocess.run(['docker', 'rm', '-f', container_name], capture_output=True)
-            # Optional: Remove volumes? No, keep data safe by default.
+            
+            # Remove from installed_apps.json
+            try:
+                if os.path.exists(INSTALLED_APPS_FILE):
+                    with open(INSTALLED_APPS_FILE, 'r') as f:
+                        installed = json.load(f)
+                    
+                    if app_id in installed:
+                        del installed[app_id]
+                        with open(INSTALLED_APPS_FILE, 'w') as f:
+                            json.dump(installed, f, indent=4)
+            except Exception as e:
+                print(f"Failed to remove from installed apps: {e}")
+                
             msg = f"{app_id} uninstalled"
             
         elif action == 'start':

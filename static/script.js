@@ -631,9 +631,26 @@ function renderDashboardApps(apps) {
     grid.innerHTML = apps.map(app => {
         // Check if this is a Docker app
         const isDockerApp = app.type === 'docker';
-        
+        const optionsMenu = isDockerApp ? `
+            <div class="app-options" onclick="event.stopPropagation(); toggleAppOptions('${app.id}')">
+                <i class="fa-solid fa-ellipsis-vertical"></i>
+            </div>
+            <div class="app-options-menu glass" id="options-menu-${app.id}" style="display: none;" onclick="event.stopPropagation();">
+                <div class="option-item" onclick="openDockerApp('${app.url}')">
+                    <i class="fa-solid fa-external-link-alt"></i> Open
+                </div>
+                <div class="option-item" onclick="editDockerPort('${app.id}')">
+                    <i class="fa-solid fa-pen-to-square"></i> Edit Port
+                </div>
+                <div class="option-item text-danger" onclick="uninstallDockerApp('${app.id}')">
+                    <i class="fa-solid fa-trash"></i> Uninstall
+                </div>
+            </div>
+        ` : '';
+
         return `
         <div class="app-item glass" draggable="true" data-id="${app.id}" onclick="handleAppClick(event, '${app.url}')">
+            ${optionsMenu}
             <div class="app-icon ${app.type === 'docker' ? 'app-icon-docker' : ''}" style="--app-color: ${app.color};">
                 ${app.icon.startsWith('http') ? `<img src="${app.icon}" style="width:${app.type === 'docker' ? '100%' : '32px'};height:${app.type === 'docker' ? '100%' : '32px'};" onerror="this.src='/static/favicon.svg'">` : app.icon.startsWith('/') ? `<img src="${app.icon}" style="width:32px;height:32px;filter:brightness(0) invert(1)">` : `<i class="${app.icon.startsWith('fa') ? app.icon : 'fa-solid fa-' + app.icon}"></i>`}
             </div>
@@ -849,4 +866,69 @@ function openStorageManager() {
 function closeStorageManager(event) {
     const modal = document.getElementById('storage-manager-modal');
     if (modal) modal.classList.remove('active');
+}
+
+// App Options Menu Functions
+function toggleAppOptions(appId) {
+    // Hide all other open menus
+    document.querySelectorAll('.app-options-menu').forEach(menu => {
+        if (menu.id !== 'options-menu-' + appId) {
+            menu.style.display = 'none';
+        }
+    });
+    
+    const menu = document.getElementById('options-menu-' + appId);
+    if (menu) {
+        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    }
+}
+
+// Close options menu when clicking outside
+document.addEventListener('click', () => {
+    document.querySelectorAll('.app-options-menu').forEach(menu => {
+        menu.style.display = 'none';
+    });
+});
+
+function openDockerApp(url) {
+    if (url && url !== '#') {
+        window.open(url, '_blank');
+    }
+}
+
+function editDockerPort(appId) {
+    // For now, this is a placeholder. 
+    // Implementing port editing requires backend changes to re-create the container.
+    alert('Fitur Edit Port untuk ' + appId + ' masih dalam pengembangan.');
+}
+
+async function uninstallDockerApp(appId) {
+    if (!confirm('Apakah Anda yakin ingin menghapus (uninstall) aplikasi ' + appId + '? Data container akan hilang!')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/store/manage', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                action: 'uninstall',
+                app_id: appId
+            })
+        });
+        
+        const data = await response.json();
+        if (response.ok) {
+            alert('Aplikasi berhasil dihapus.');
+            loadDashboardApps(); // Refresh the dashboard
+            if (typeof refreshDockerStatus === 'function') refreshDockerStatus();
+        } else {
+            alert('Gagal menghapus aplikasi: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Uninstall error:', error);
+        alert('Terjadi kesalahan saat menghubungi server.');
+    }
 }
