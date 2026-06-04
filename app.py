@@ -5005,7 +5005,7 @@ def install_worker(app_id, config, username):
                 "description": "Custom Application",
                 "category": "Custom",
                 "image": image,
-                "icon": "/static/img/apps/docker.png",
+                "icon": "/static/favicon.svg",
                 "ports": config.get('ports', []),
                 "volumes": config.get('volumes', []),
                 "env": config.get('env', []),
@@ -5390,7 +5390,7 @@ def get_dashboard_apps():
             dynamic_icon = f"https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/{icon_name}.svg"
             
             # Fallback nama dan icon
-            display_name = meta.get('name', container_name)
+            display_name = meta.get('name', container_name).replace('-', ' ')
             icon_url = meta.get('icon', dynamic_icon)
             
             # Create dashboard item
@@ -5591,7 +5591,7 @@ def install_app():
             'name': app_default.get('name', app_id),
             'container_name': container_name,
             'image': image,
-            'icon': app_default.get('icon', 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/docker.png'),
+            'icon': app_default.get('icon', '/static/favicon.svg'),
             'ports': deploy_ports,
             'network_mode': net_mode,
             'installed_at': datetime.now().isoformat(),
