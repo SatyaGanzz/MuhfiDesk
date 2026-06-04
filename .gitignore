@@ -10,6 +10,10 @@ venv/
 data/*
 !data/app_catalog.json
 !data/app_settings.json
+!data/demo.png
+!data/demo1.png
+!data/demo2.png
+!data/demo4.png
 *.db
 *.log
 *.zip

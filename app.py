@@ -5324,62 +5324,77 @@ def get_dashboard_apps():
 
     all_items = [item for item in SYSTEM_APPS if system_app_allowed(item)]
     
-    # 2. Get Installed Docker Apps from installed_apps.json
+    # 2. Get Installed Docker Apps dynamically
     try:
         installed_apps = load_installed_apps()
         
+        # Buat dictionary untuk cepat cari metadata app dari installed_apps.json
+        installed_meta = {app.get('container_name'): app for app in installed_apps}
+        
+        # Load app catalog and user catalog to find icons if needed
+        catalog = []
+        if os.path.exists(CATALOG_FILE):
+            with open(CATALOG_FILE, 'r') as f: catalog.extend(json.load(f))
+        if os.path.exists(USER_CATALOG_FILE):
+            try:
+                with open(USER_CATALOG_FILE, 'r') as f: catalog.extend(json.load(f))
+            except: pass
+            
+        catalog_meta = {app.get('name', '').lower(): app for app in catalog}
+
         # Get current Docker container status
         client = docker.from_env()
         containers = client.containers.list(all=True)
         
-        # Create a map of container names to their status and ports
-        container_map = {}
+        # Tambahkan ke dashboard jika container punya port public atau ada di installed_apps
         for c in containers:
-            container_map[c.name] = {
-                'status': c.status,
-                'ports': c.attrs['NetworkSettings']['Ports']
-            }
-        
-        # Add installed apps to dashboard
-        for app in installed_apps:
-            container_name = app.get('container_name')
+            container_name = c.name
+            is_running = c.status == 'running'
             
-            # Check if container exists
-            if container_name in container_map:
-                container_info = container_map[container_name]
-                is_running = container_info['status'] == 'running'
+            # Coba cari public port pertama
+            target_port = None
+            if c.attrs['NetworkSettings']['Ports']:
+                for p_internal, p_bindings in c.attrs['NetworkSettings']['Ports'].items():
+                    if p_bindings:
+                        target_port = p_bindings[0]['HostPort']
+                        break
+            
+            # Jangan tampilkan kalau bukan app yang seharusnya ada di dashboard 
+            # (Misal ga ada port dan ga ada di database)
+            if not target_port and container_name not in installed_meta:
+                continue
                 
-                # Get the first exposed port
-                target_port = None
-                if app.get('ports') and len(app.get('ports')) > 0:
-                    target_port = app.get('ports')[0].get('host')
+            # Ambil metadata (nama, icon)
+            meta = installed_meta.get(container_name, {})
+            
+            # Coba tebak dari catalog jika ga ada di installed_meta
+            clean_name = container_name.replace('muhfi_', '')
+            if not meta and clean_name.lower() in catalog_meta:
+                meta = catalog_meta[clean_name.lower()]
                 
-                # If no port in metadata, try to get from container
-                if not target_port and container_info['ports']:
-                    for p_internal, p_bindings in container_info['ports'].items():
-                        if p_bindings:
-                            target_port = p_bindings[0]['HostPort']
-                            break
-                
-                # Build URL
-                url = "#"
-                if target_port and is_running:
-                    host_ip = request.host.split(':')[0]
-                    url = f"http://{host_ip}:{target_port}"
-                
-                # Create dashboard item
-                dashboard_item = {
-                    "id": f"docker_{container_name}",
-                    "name": app.get('name', container_name),
-                    "icon": app.get('icon', 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/docker.png'),
-                    "color": "linear-gradient(135deg, #2496ed, #0db7ed)" if is_running else "linear-gradient(135deg, #636e72, #2d3436)",
-                    "url": url,
-                    "type": "docker",
-                    "status": "running" if is_running else "stopped",
-                    "container_name": container_name
-                }
-                
-                all_items.append(dashboard_item)
+            # Build URL
+            url = "#"
+            if target_port and is_running:
+                host_ip = request.host.split(':')[0]
+                url = f"http://{host_ip}:{target_port}"
+            
+            # Fallback nama dan icon
+            display_name = meta.get('name', container_name)
+            icon_url = meta.get('icon', 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/docker.png')
+            
+            # Create dashboard item
+            dashboard_item = {
+                "id": f"docker_{container_name}",
+                "name": display_name,
+                "icon": icon_url,
+                "color": "linear-gradient(135deg, #2496ed, #0db7ed)" if is_running else "linear-gradient(135deg, #636e72, #2d3436)",
+                "url": url,
+                "type": "docker",
+                "status": "running" if is_running else "stopped",
+                "container_name": container_name
+            }
+            
+            all_items.append(dashboard_item)
     
     except Exception as e:
         print(f"Error fetching installed apps for dashboard: {e}")
@@ -5558,9 +5573,26 @@ def install_app():
             os.makedirs(os.path.dirname(USER_CATALOG_FILE), exist_ok=True)
             with open(USER_CATALOG_FILE, 'w') as f:
                 json.dump(user_apps, f, indent=2)
+                
+        # 6. Save to installed_apps.json
+        app_metadata = {
+            'id': app_id,
+            'name': app_default.get('name', app_id),
+            'container_name': container_name,
+            'image': image,
+            'icon': app_default.get('icon', 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/docker.png'),
+            'ports': deploy_ports,
+            'network_mode': net_mode,
+            'installed_at': datetime.now().isoformat(),
+            'installed_by': session.get('username', 'admin')
+        }
+        try:
+            save_installed_app(app_metadata)
+        except Exception as e:
+            print(f"Failed to save installed_app metadata: {e}")
             
         audit_log('APP_INSTALL', f"Installed app {app_id} as {container_name}", session.get('username'))
-        return jsonify({'success': True, 'message': f'{app_default["name"]} installed successfully'})
+        return jsonify({'success': True, 'message': f'{app_default.get("name", app_id)} installed successfully'})
         
     except subprocess.CalledProcessError as e:
          return jsonify({'error': 'Failed to pull image'}), 500
