@@ -21,13 +21,22 @@ echo "🚀 Starting MuhfiDesk Installation..."
 echo "📦 Installing system dependencies..."
 if [ -x "$(command -v apt-get)" ]; then
     apt-get update -y
-    apt-get install -y python3 python3-pip python3-venv git curl
+    apt-get install -y python3 python3-pip python3-venv git curl neofetch
 elif [ -x "$(command -v dnf)" ]; then
-    dnf install -y python3 python3-pip git curl
+    dnf install -y python3 python3-pip git curl neofetch
 elif [ -x "$(command -v pacman)" ]; then
-    pacman -Sy --noconfirm python python-pip git curl
+    pacman -Sy --noconfirm python python-pip git curl neofetch
 else
-    echo "⚠️ Unsupported package manager. Please install python3, pip, and git manually."
+    echo "⚠️ Unsupported package manager. Please install python3, pip, git, and neofetch manually."
+fi
+
+if ! command -v neofetch >/dev/null 2>&1; then
+    echo "==========================================================="
+    echo "⚠️  NEOFETCH TIDAK DITEMUKAN!"
+    echo "Aplikasi ini merekomendasikan neofetch untuk menampilkan info sistem."
+    echo "Silakan install manual, misalnya: sudo apt install neofetch"
+    echo "==========================================================="
+    sleep 3
 fi
 
 # 3. Clone repository
