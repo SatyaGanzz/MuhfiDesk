@@ -32,28 +32,35 @@ case "$1" in
         check_root "start"
         if command -v systemctl >/dev/null 2>&1 && pidof systemd >/dev/null 2>&1; then
             systemctl start $SERVICE_NAME
-            echo "✅ MuhfiDesk started."
+            echo "✅ MuhfiDesk started via systemd."
         else
-            echo "⚠️ Systemd is not running. Start manually:"
-            echo "cd $INSTALL_DIR && sudo .venv/bin/python app.py"
+            echo "⚠️ Systemd is not running. Starting MuhfiDesk in background..."
+            nohup sudo $INSTALL_DIR/.venv/bin/python $INSTALL_DIR/app.py > $INSTALL_DIR/app.log 2>&1 &
+            echo "✅ MuhfiDesk started. Logs are at $INSTALL_DIR/app.log"
         fi
         ;;
     stop)
         check_root "stop"
         if command -v systemctl >/dev/null 2>&1 && pidof systemd >/dev/null 2>&1; then
             systemctl stop $SERVICE_NAME
-            echo "✅ MuhfiDesk stopped."
+            echo "✅ MuhfiDesk stopped via systemd."
         else
-            echo "⚠️ Systemd is not running. You must kill the python process manually."
+            echo "⚠️ Systemd is not running. Killing python processes for MuhfiDesk..."
+            pkill -f "$INSTALL_DIR/app.py" || true
+            echo "✅ MuhfiDesk stopped."
         fi
         ;;
     restart)
         check_root "restart"
         if command -v systemctl >/dev/null 2>&1 && pidof systemd >/dev/null 2>&1; then
             systemctl restart $SERVICE_NAME
-            echo "✅ MuhfiDesk restarted."
+            echo "✅ MuhfiDesk restarted via systemd."
         else
-            echo "⚠️ Systemd is not running."
+            echo "⚠️ Systemd is not running. Restarting manually..."
+            pkill -f "$INSTALL_DIR/app.py" || true
+            sleep 2
+            nohup sudo $INSTALL_DIR/.venv/bin/python $INSTALL_DIR/app.py > $INSTALL_DIR/app.log 2>&1 &
+            echo "✅ MuhfiDesk restarted. Logs are at $INSTALL_DIR/app.log"
         fi
         ;;
     status)
@@ -61,7 +68,12 @@ case "$1" in
             systemctl status $SERVICE_NAME
         else
             echo "⚠️ Systemd is not running. Checking processes instead:"
-            ps aux | grep "app.py" | grep -v grep
+            if pgrep -f "$INSTALL_DIR/app.py" > /dev/null; then
+                echo "✅ MuhfiDesk is RUNNING."
+                ps aux | grep "[a]pp.py"
+            else
+                echo "❌ MuhfiDesk is STOPPED."
+            fi
         fi
         ;;
     update)

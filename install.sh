@@ -102,6 +102,15 @@ else
     echo "✅ MuhfiDesk successfully installed!"
     echo "🔄 Starting MuhfiDesk dashboard in the background..."
     nohup $INSTALL_DIR/.venv/bin/python $INSTALL_DIR/app.py > $INSTALL_DIR/app.log 2>&1 &
+    
+    # Add cron job for auto-start on boot for non-systemd environments
+    echo "⚙️ Setting up @reboot cron job for auto-start..."
+    if command -v crontab >/dev/null 2>&1; then
+        (crontab -l 2>/dev/null | grep -v "$INSTALL_DIR/app.py"; echo "@reboot nohup $INSTALL_DIR/.venv/bin/python $INSTALL_DIR/app.py > $INSTALL_DIR/app.log 2>&1 &") | crontab -
+    else
+        echo "⚠️ crontab not found. Auto-start on reboot may not work. You can manually start with: muhfidesk start"
+    fi
+
     echo "🌐 Dashboard is now running! Access it at: http://localhost:$PORT"
     echo "==========================================================="
 fi

@@ -4765,9 +4765,30 @@ def install_worker(app_id, config, username):
                 host_port = config['ports'][0]['host']
                 yaml_str = yaml_str.replace('${WEBUI_PORT}', str(host_port))
                 yaml_str = yaml_str.replace('${APP_PORT}', str(host_port))
+            
+            # Inject restart policy ke semua service jika belum ada
+            try:
+                parsed_compose = yaml.safe_load(yaml_str)
+                if parsed_compose and 'services' in parsed_compose:
+                    for svc_name in parsed_compose['services']:
+                        if 'restart' not in parsed_compose['services'][svc_name]:
+                            parsed_compose['services'][svc_name]['restart'] = 'unless-stopped'
+                    yaml_str = yaml.dump(parsed_compose, default_flow_style=False)
+            except Exception as e:
+                print(f"Warning: Failed to inject restart policy into raw_compose: {e}")
                 
         elif config.get('raw_compose'):
             yaml_str = config.get('raw_compose')
+            # Inject restart policy ke custom raw_compose juga
+            try:
+                parsed_compose = yaml.safe_load(yaml_str)
+                if parsed_compose and 'services' in parsed_compose:
+                    for svc_name in parsed_compose['services']:
+                        if 'restart' not in parsed_compose['services'][svc_name]:
+                            parsed_compose['services'][svc_name]['restart'] = 'unless-stopped'
+                    yaml_str = yaml.dump(parsed_compose, default_flow_style=False)
+            except Exception as e:
+                print(f"Warning: Failed to inject restart policy into custom raw_compose: {e}")
         else:
             # === FALLBACK TO BASIC COMPOSE DICT (For custom app or older catalog items) ===
             compose_dict = {
@@ -5463,8 +5484,9 @@ def install_app():
         # 2. Prepare Docker Run Command
         run_cmd = ['docker', 'run', '-d', '--name', container_name]
         
-        if app_default.get('restart'):
-            run_cmd.extend(['--restart', app_default['restart']])
+        # Selalu set restart policy agar container auto-start setelah reboot
+        restart_policy = app_default.get('restart', 'unless-stopped')
+        run_cmd.extend(['--restart', restart_policy])
         
         # Handling Network Mode (Priority to config if present)
         # Note: If network_mode is 'host', we shouldn't publish ports.
