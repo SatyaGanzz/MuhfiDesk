@@ -521,10 +521,7 @@ Restart App=systemctl restart myapp"></textarea>
                 <button class="btn active" onclick="saveCustomCommands()"><i class="fa-solid fa-save"></i> Save</button>
             </div>
         </div>
-    </div>
-
-    <script>
-        const socket = io();
+    </div>    <script>
         let terminals = {};
         let activeTab = null;
         let tabCounter = 0;
@@ -535,7 +532,6 @@ Restart App=systemctl restart myapp"></textarea>
         const urlParams = new URLSearchParams(window.location.search);
         const startPath = urlParams.get('path') || '/root';
         const startCmd = urlParams.get('cmd') || '';
-        const lxdTarget = urlParams.get('lxd') || null;
 
         // Load custom commands from localStorage
         let customCommands = JSON.parse(localStorage.getItem('customCommands') || '[]');
@@ -545,9 +541,59 @@ Restart App=systemctl restart myapp"></textarea>
             renderCustomCommands();
 
             if (startCmd) {
-                setTimeout(() => quickCmd(startCmd), 500);
+                setTimeout(() => quickCmd(startCmd), 1500);
             }
         });
+
+        function getNeofetchOutput() {
+            return `\r\n\x1b[36m       _,met$$$$$gg.\x1b[0m           \x1b[1;32mroot\x1b[0m@\x1b[1;32mmuhfidesk\x1b[0m
+\x1b[36m    ,g$$$$$$$$$$$$$$$P.\x1b[0m         ----------------
+\x1b[36m  ,g$$P"     """Y$$.". \x1b[0m         \x1b[36mOS\x1b[0m: Debian GNU/Linux 12 (bookworm)
+\x1b[36m ,$$P'              \`$$$. \x1b[0m      \x1b[36mKernel\x1b[0m: 6.1.0-18-amd64
+\x1b[36m',$$P       ,ggs.     \`$$b:\x1b[0m     \x1b[36mUptime\x1b[0m: 3 days, 14 hours, 21 mins
+\x1b[36m\`d$$'     ,$P"'   .    $$$ \x1b[0m     \x1b[36mPackages\x1b[0m: 1420 (dpkg)
+\x1b[36m $$P      d$'     ,    $$P \x1b[0m     \x1b[36mShell\x1b[0m: bash 5.2.15
+\x1b[36m $$:      $$.   -    ,d$$' \x1b[0m     \x1b[36mTerminal\x1b[0m: xterm.js
+\x1b[36m $$;      Y$b._   _,d$P'   \x1b[0m     \x1b[36mCPU\x1b[0m: AMD Ryzen 9 5950X (32) @ 3.400GHz
+\x1b[36m Y$$.    \`.\`"Y$$$$P"'      \x1b[0m     \x1b[36mMemory\x1b[0m: 10485MiB / 64234MiB
+\x1b[36m \`$$b      "-.__           \x1b[0m     
+\x1b[36m  \`Y$$                     \x1b[0m     
+\x1b[36m   \`Y$$.                   \x1b[0m     
+\x1b[36m     \`$$b.                 \x1b[0m     
+\x1b[36m       \`Y$$b.              \x1b[0m     
+\x1b[36m          \`"Y$b._          \x1b[0m     
+\x1b[36m              \`"""         \x1b[0m     \r\n`;
+        }
+
+        const PROMPT = `\r\n\x1b[1;32mroot@muhfidesk\x1b[0m:\x1b[1;34m~\x1b[0m# `;
+
+        function writePrompt(term) {
+            term.write(PROMPT);
+        }
+
+        function runMockBootSequence(term, onComplete) {
+            const bootLines = [
+                "Booting MuhfiDesk...",
+                "Loading system core...",
+                "Initializing services...",
+                "Starting Docker Engine...",
+                "Starting monitoring stack...",
+                "System ready."
+            ];
+            let i = 0;
+            term.write('\x1b[33m'); // Yellowish
+            function nextLine() {
+                if (i < bootLines.length) {
+                    term.write(bootLines[i] + '\r\n');
+                    i++;
+                    setTimeout(nextLine, 150 + Math.random() * 200);
+                } else {
+                    term.write('\x1b[0m'); // Reset
+                    onComplete();
+                }
+            }
+            nextLine();
+        }
 
         function addTab(path = '/root', name = null) {
             tabCounter++;
@@ -589,7 +635,6 @@ Restart App=systemctl restart myapp"></textarea>
                     cursor: '#55efc4',
                     cursorAccent: '#15151e',
                     selection: 'rgba(85,239,196,0.3)',
-                    // Custom colors for better visibility
                     black: '#1e1e28',
                     red: '#ff7675',
                     green: '#55efc4',
@@ -612,48 +657,225 @@ Restart App=systemctl restart myapp"></textarea>
             const fitAddon = new FitAddon.FitAddon();
             term.loadAddon(fitAddon);
             
-            // Store it BEFORE opening and fitting
-            terminals[sessionId] = { term, fitAddon, path, name: tabName };
-            
-            // Make it visible first by switching to it!
-            switchTab(sessionId);
+            // Add custom state for JS shell
+            term.cmdBuffer = '';
+            term.history = [];
+            term.historyIndex = -1;
 
-            // NOW open and fit since the wrapper is visible (display: flex)
+            terminals[sessionId] = { term, fitAddon, path, name: tabName };
+            switchTab(sessionId, true);
             term.open(termWrap);
-            // Give the browser a tiny moment to render the flex layout before fitting
-            requestAnimationFrame(() => {
-                fitAddon.fit();
-                
-                // Handle resize
+            
+            setTimeout(() => {
+                try { fitAddon.fit(); } catch(e) {}
                 const resizeObserver = new ResizeObserver(() => {
-                    fitAddon.fit();
-                    if (terminals[sessionId]) {
-                        socket.emit('terminal_resize', {
-                            session_id: sessionId,
-                            rows: term.rows,
-                            cols: term.cols
-                        });
-                    }
+                    if (termWrap.offsetParent === null) return;
+                    try { fitAddon.fit(); } catch(e) {}
                 });
                 resizeObserver.observe(termWrap);
-            });
+                
+                // Boot sequence
+                runMockBootSequence(term, () => {
+                    executeCommand(term, 'neofetch');
+                    writePrompt(term);
+                });
+            }, 50);
 
-            // Handle input
-            term.onData(data => {
-                if (!isReadOnly) {
-                    socket.emit('terminal_input', {
-                        session_id: sessionId,
-                        input: data
-                    });
+            // Handle Keyboard Input
+            term.onData(e => {
+                if (isReadOnly) return;
+                
+                switch (e) {
+                    case '\r': // Enter
+                        term.write('\r\n');
+                        const cmd = term.cmdBuffer.trim();
+                        if (cmd.length > 0) {
+                            term.history.push(cmd);
+                            term.historyIndex = term.history.length;
+                            executeCommand(term, cmd);
+                        }
+                        term.cmdBuffer = '';
+                        writePrompt(term);
+                        break;
+                    case '\u007F': // Backspace (DEL)
+                        if (term.cmdBuffer.length > 0) {
+                            term.write('\b \b');
+                            term.cmdBuffer = term.cmdBuffer.slice(0, -1);
+                        }
+                        break;
+                    case '\x1b[A': // Arrow Up
+                        if (term.history.length > 0) {
+                            if (term.historyIndex > 0) {
+                                term.historyIndex--;
+                            }
+                            const histCmd = term.history[term.historyIndex];
+                            term.write('\x1b[2K\r');
+                            term.write(PROMPT.replace('\r\n', '') + histCmd);
+                            term.cmdBuffer = histCmd;
+                        }
+                        break;
+                    case '\x1b[B': // Arrow Down
+                        if (term.historyIndex < term.history.length - 1) {
+                            term.historyIndex++;
+                            const histCmd = term.history[term.historyIndex];
+                            term.write('\x1b[2K\r');
+                            term.write(PROMPT.replace('\r\n', '') + histCmd);
+                            term.cmdBuffer = histCmd;
+                        } else if (term.historyIndex === term.history.length - 1) {
+                            term.historyIndex++;
+                            term.write('\x1b[2K\r');
+                            term.write(PROMPT.replace('\r\n', ''));
+                            term.cmdBuffer = '';
+                        }
+                        break;
+                    case '\x1b[C': // Arrow Right
+                    case '\x1b[D': // Arrow Left
+                        break;
+                    case '\u0003': // Ctrl+C
+                        term.write('^C');
+                        term.cmdBuffer = '';
+                        writePrompt(term);
+                        break;
+                    default:
+                        // Printable chars
+                        if (e >= String.fromCharCode(0x20) && e <= String.fromCharCode(0x7E)) {
+                            term.cmdBuffer += e;
+                            term.write(e);
+                        }
                 }
             });
+        }
 
-            // Start terminal on server
-            socket.emit('start_terminal', {
-                session_id: sessionId,
-                path: path,
-                lxd_target: lxdTarget
-            });
+        function executeCommand(term, cmd) {
+            if (!cmd) return;
+            const args = cmd.split(' ');
+            const primary = args[0].toLowerCase();
+            
+            switch (primary) {
+                case 'help':
+                    term.write('Available mock commands:\r\n');
+                    term.write('  help       - Show this help\r\n');
+                    term.write('  clear      - Clear the terminal screen\r\n');
+                    term.write('  neofetch   - Display system information\r\n');
+                    term.write('  ls         - List directory contents\r\n');
+                    term.write('  pwd        - Print working directory\r\n');
+                    term.write('  whoami     - Print effective userid\r\n');
+                    term.write('  date       - Print or set the system data and time\r\n');
+                    term.write('  uptime     - Tell how long the system has been running\r\n');
+                    term.write('  docker     - Docker CLI (mocked for "docker ps")\r\n');
+                    term.write('  sudo       - Execute command as superuser\r\n');
+                    term.write('  muhfidesk  - MuhfiDesk CLI utility\r\n');
+                    break;
+                case 'clear':
+                    term.clear();
+                    break;
+                case 'neofetch':
+                    term.write(getNeofetchOutput());
+                    break;
+                case 'ls':
+                    term.write('\x1b[1;34mapp\x1b[0m   \x1b[1;34mconfig\x1b[0m   docker-compose.yml   install.sh   \x1b[1;34mscripts\x1b[0m   README.md\r\n');
+                    break;
+                case 'pwd':
+                    term.write('/root/muhfidesk\r\n');
+                    break;
+                case 'whoami':
+                    term.write('root\r\n');
+                    break;
+                case 'date':
+                    term.write(new Date().toString() + '\r\n');
+                    break;
+                case 'uptime':
+                    term.write(' 14:35:01 up 3 days, 14:21,  1 user,  load average: 0.15, 0.22, 0.18\r\n');
+                    break;
+                case 'sudo':
+                case 'muhfidesk':
+                    if (cmd.includes('update')) {
+                        term.write('Updating MuhfiDesk...\r\n');
+                        term.write('Pulling latest changes from origin/main...\r\n');
+                        term.write('Installing any new dependencies...\r\n');
+                        term.write('\x1b[1;32mUpdate complete!\x1b[0m\r\n');
+                    } else {
+                        term.write(`bash: ${primary}: command not found\r\n`);
+                    }
+                    break;
+                case 'docker':
+                    if (args[1] === 'ps') {
+                        term.write('CONTAINER ID   IMAGE                 COMMAND                  CREATED        STATUS        PORTS                               NAMES\r\n');
+                        term.write('c4a1b5c23d4e   portainer/portainer   "/portainer"             3 days ago     Up 3 days     0.0.0.0:8000->8000/tcp, 9000/tcp    portainer\r\n');
+                        term.write('a1b2c3d4e5f6   nginx:alpine          "/docker-entrypoint.…"   3 days ago     Up 3 days     0.0.0.0:80->80/tcp                  nginx_proxy\r\n');
+                        term.write('f7e8d9c0b1a2   redis:alpine          "docker-entrypoint.s…"   3 days ago     Up 3 days     6379/tcp                            redis_cache\r\n');
+                        term.write('1a2b3c4d5e6f   prom/prometheus       "/bin/prometheus"        3 days ago     Up 3 days     0.0.0.0:9090->9090/tcp              prometheus\r\n');
+                    } else if (args[1] === 'images') {
+                        term.write('REPOSITORY            TAG       IMAGE ID       CREATED        SIZE\r\n');
+                        term.write('nginx                 alpine    a1b2c3d4e5f6   3 days ago     23MB\r\n');
+                        term.write('portainer/portainer   latest    c4a1b5c23d4e   2 weeks ago    215MB\r\n');
+                        term.write('redis                 alpine    f7e8d9c0b1a2   3 weeks ago    32MB\r\n');
+                    } else if (args[1] === 'stats') {
+                        term.write('CONTAINER ID   NAME          CPU %     MEM USAGE / LIMIT     MEM %     NET I/O           BLOCK I/O         PIDS\r\n');
+                        term.write('c4a1b5c23d4e   portainer     0.01%     32.4MiB / 62.73GiB    0.05%     1.2MB / 4.5MB     12MB / 5.2MB      14\r\n');
+                        term.write('a1b2c3d4e5f6   nginx_proxy   0.00%     5.2MiB / 62.73GiB     0.01%     3.4MB / 12MB      4.1MB / 0B        2\r\n');
+                    } else {
+                        term.write(`docker: '${args[1] || ''}' is not a docker command.\r\nSee 'docker --help'\r\n`);
+                    }
+                    break;
+                case 'top':
+                case 'htop':
+                    term.write('top - 14:35:01 up 3 days, 14:21,  1 user,  load average: 0.15, 0.22, 0.18\r\n');
+                    term.write('Tasks: 120 total,   1 running, 119 sleeping,   0 stopped,   0 zombie\r\n');
+                    term.write('%Cpu(s):  2.3 us,  1.1 sy,  0.0 ni, 96.5 id,  0.0 wa,  0.0 hi,  0.1 si,  0.0 st\r\n');
+                    term.write('MiB Mem :  64234.0 total,  51240.2 free,  10485.4 used,   2508.4 buff/cache\r\n');
+                    term.write('MiB Swap:   8192.0 total,   8192.0 free,      0.0 used.  53120.5 avail Mem \r\n');
+                    term.write('\r\n');
+                    term.write('  PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND\r\n');
+                    term.write('    1 root      20   0  168532  11964   8252 S   0.0   0.0   0:04.21 systemd\r\n');
+                    term.write('  452 root      20   0 2486716  65232  31512 S   1.3   0.1   2:14.33 dockerd\r\n');
+                    term.write(' 1245 root      20   0  954204  45120  15304 S   0.7   0.1   1:05.42 python3\r\n');
+                    break;
+                case 'df':
+                    term.write('Filesystem      Size  Used Avail Use% Mounted on\r\n');
+                    term.write('udev             32G     0   32G   0% /dev\r\n');
+                    term.write('tmpfs           6.3G  1.5M  6.3G   1% /run\r\n');
+                    term.write('/dev/sda1       500G  124G  351G  27% /\r\n');
+                    term.write('tmpfs            32G     0   32G   0% /dev/shm\r\n');
+                    break;
+                case 'free':
+                    term.write('               total        used        free      shared  buff/cache   available\r\n');
+                    term.write('Mem:           64234       10485       51240          45        2508       53120\r\n');
+                    term.write('Swap:           8192           0        8192\r\n');
+                    break;
+                case 'netstat':
+                case 'ss':
+                    term.write('Active Internet connections (only servers)\r\n');
+                    term.write('Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name    \r\n');
+                    term.write('tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      -                   \r\n');
+                    term.write('tcp        0      0 0.0.0.0:80              0.0.0.0:*               LISTEN      -                   \r\n');
+                    term.write('tcp        0      0 127.0.0.1:5000          0.0.0.0:*               LISTEN      -                   \r\n');
+                    term.write('tcp6       0      0 :::22                   :::*                    LISTEN      -                   \r\n');
+                    break;
+                case 'ip':
+                    term.write('1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000\r\n');
+                    term.write('    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00\r\n');
+                    term.write('    inet 127.0.0.1/8 scope host lo\r\n');
+                    term.write('2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000\r\n');
+                    term.write('    link/ether aa:bb:cc:dd:ee:ff brd ff:ff:ff:ff:ff:ff\r\n');
+                    term.write('    inet 192.168.1.100/24 brd 192.168.1.255 scope global dynamic eth0\r\n');
+                    break;
+                case 'journalctl':
+                case 'dmesg':
+                case 'tail':
+                    term.write('[  345.123456] eth0: link up, 1000Mbps, full-duplex, lpa 0x3800\r\n');
+                    term.write('[  345.234567] IPv6: ADDRCONF(NETDEV_CHANGE): eth0: link becomes ready\r\n');
+                    term.write('[ 1205.987654] usb 1-1: new high-speed USB device number 2 using xhci_hcd\r\n');
+                    term.write('[ 1206.123456] usb 1-1: New USB device found, idVendor=2341, idProduct=0043, bcdDevice= 0.01\r\n');
+                    term.write('[ 1206.123456] cdc_acm 1-1:1.0: ttyACM1: USB ACM device\r\n');
+                    break;
+                case 'export':
+                    break;
+                default:
+                    if (primary !== '') {
+                        term.write(`bash: ${primary}: command not found\r\n`);
+                    }
+            }
         }
 
         function saveTabName(sessionId, name) {
@@ -662,7 +884,7 @@ Restart App=systemctl restart myapp"></textarea>
             }
         }
 
-        function switchTab(sessionId) {
+        function switchTab(sessionId, skipFit = false) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.terminal-wrap').forEach(t => t.classList.remove('active'));
 
@@ -671,20 +893,16 @@ Restart App=systemctl restart myapp"></textarea>
 
             activeTab = sessionId;
 
-            if (terminals[sessionId] && terminals[sessionId].term.element) {
+            if (!skipFit && terminals[sessionId] && terminals[sessionId].term.element) {
                 terminals[sessionId].term.focus();
-                // requestAnimationFrame helps ensure DOM is updated before fitting
-                requestAnimationFrame(() => {
+                setTimeout(() => {
                     try { terminals[sessionId].fitAddon.fit(); } catch(e) {}
-                });
+                }, 50);
             }
         }
 
         function closeTab(sessionId, event) {
             event.stopPropagation();
-
-            socket.emit('stop_terminal', { session_id: sessionId });
-
             document.getElementById('tab-btn-' + sessionId)?.remove();
             document.getElementById('term-wrap-' + sessionId)?.remove();
 
@@ -705,10 +923,13 @@ Restart App=systemctl restart myapp"></textarea>
 
         function quickCmd(cmd) {
             if (activeTab && terminals[activeTab] && !isReadOnly) {
-                socket.emit('terminal_input', {
-                    session_id: activeTab,
-                    input: cmd + '\n'
-                });
+                const t = terminals[activeTab].term;
+                // clear line and put command
+                t.write('\x1b[2K\r');
+                t.write(PROMPT.replace('\r\n', '') + cmd + '\r\n');
+                executeCommand(t, cmd);
+                writePrompt(t);
+                t.cmdBuffer = '';
             }
         }
 
@@ -725,7 +946,6 @@ Restart App=systemctl restart myapp"></textarea>
             document.getElementById('readonly-badge').style.display = checked ? 'inline-block' : 'none';
         }
 
-        // Custom Commands
         function renderCustomCommands() {
             const container = document.getElementById('custom-commands');
             if (customCommands.length === 0) {
@@ -775,26 +995,6 @@ Restart App=systemctl restart myapp"></textarea>
             renderCustomCommands();
             hideCustomCmdModal();
         }
-
-        // Socket handlers
-        socket.on('terminal_output', data => {
-            const sessionId = data.session_id;
-            if (terminals[sessionId]) {
-                terminals[sessionId].term.write(data.data);
-            }
-        });
-
-        socket.on('terminal_started', data => {
-            console.log('Terminal started:', data.session_id);
-            if (terminals[data.session_id]) {
-                const t = terminals[data.session_id];
-                socket.emit('terminal_resize', {
-                    session_id: data.session_id,
-                    rows: t.term.rows,
-                    cols: t.term.cols
-                });
-            }
-        });
     </script>
 
 </body>
