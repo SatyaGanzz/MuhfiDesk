@@ -3007,24 +3007,65 @@ def check_update_layout():
 @app.route('/api/perform-update', methods=['POST'])
 @login_required
 def perform_update():
-    """Melakukan update otomatis dari GitHub"""
+    """Melakukan update otomatis dari GitHub (git pull)"""
     if session.get('role') not in ['owner', 'admin']:
         return jsonify({'success': False, 'error': 'Akses ditolak.'}), 403
 
     try:
-        # Menjalankan git pull untuk mendapatkan pembaruan terbaru dari GitHub
-        update_cmd = f"cd '{BASE_DIR}' && git pull origin main"
-        subprocess.Popen(update_cmd, shell=True)
+        audit_log('APP_UPDATE', 'Starting git pull update', session.get('username'))
         
-        # Coba restart layanan secara asinkron agar respon API sempat terkirim
-        restart_cmd = f"sleep 3 && (sudo systemctl restart muhfidesk || kill -HUP {os.getpid()})"
-        subprocess.Popen(restart_cmd, shell=True)
+        # Jalankan git pull secara synchronous agar bisa capture output
+        result = subprocess.run(
+            ['git', 'pull', 'origin', 'main'],
+            cwd=BASE_DIR,
+            capture_output=True,
+            text=True,
+            timeout=120  # 2 menit timeout
+        )
         
+        git_output = result.stdout.strip()
+        git_error = result.stderr.strip()
+        combined_output = git_output
+        if git_error:
+            combined_output += ('\n' + git_error) if combined_output else git_error
+        
+        if result.returncode == 0:
+            audit_log('APP_UPDATE', f'Git pull success: {git_output[:200]}', session.get('username'))
+            
+            # Cek apakah ada perubahan atau sudah up-to-date
+            is_up_to_date = 'Already up to date' in git_output or 'Already up-to-date' in git_output
+            
+            if is_up_to_date:
+                message = 'Sudah menggunakan versi terbaru. Tidak ada perubahan.'
+            else:
+                message = 'Pembaruan berhasil diunduh! Silakan restart service untuk menerapkan perubahan.'
+            
+            return jsonify({
+                'success': True,
+                'message': message,
+                'output': combined_output,
+                'needs_restart': not is_up_to_date
+            })
+        else:
+            audit_log('APP_UPDATE', f'Git pull failed: {combined_output[:200]}', session.get('username'))
+            return jsonify({
+                'success': False,
+                'error': 'Git pull gagal. Cek output di bawah.',
+                'output': combined_output
+            }), 500
+            
+    except subprocess.TimeoutExpired:
         return jsonify({
-            'success': True, 
-            'message': 'Pembaruan sedang diunduh (git pull). Harap tunggu sekitar 1-2 menit lalu muat ulang halaman (Refresh).'
-        })
+            'success': False,
+            'error': 'Git pull timeout setelah 2 menit. Coba lagi nanti.'
+        }), 500
+    except FileNotFoundError:
+        return jsonify({
+            'success': False,
+            'error': 'Git tidak ditemukan. Pastikan git sudah terinstall di server.'
+        }), 500
     except Exception as e:
+        audit_log('APP_UPDATE', f'Update error: {str(e)}', session.get('username'))
         return jsonify({'success': False, 'error': f'Gagal menjalankan pembaruan: {str(e)}'}), 500
 
 # ========================================

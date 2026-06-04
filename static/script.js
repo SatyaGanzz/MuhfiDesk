@@ -778,6 +778,9 @@ document.addEventListener('DOMContentLoaded', () => {
     loadDashboardApps();
     updateWebMonitor();
     setInterval(updateWebMonitor, 10000); // Polling every 10s
+
+    // Auto-refresh dashboard apps every 15s so newly installed Docker apps appear
+    setInterval(loadDashboardApps, 15000);
 });
 
 // ─── STORAGE MANAGER ────────────────────────────────────────────────────────
