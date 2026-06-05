@@ -1032,8 +1032,35 @@ function showToast(message, type = 'success') {
 }
 
 function editDockerImage(containerName) {
-    // Placeholder function for the user to implement the backend logic later
-    alert("Backend functionality for editing image will be implemented here.");
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/png, image/jpeg, image/jpg, image/svg+xml, image/webp, image/gif, image/x-icon';
+    input.onchange = async e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const formData = new FormData();
+        formData.append('icon', file);
+        
+        showToast('Uploading custom icon...', 'success');
+        
+        try {
+            const response = await fetch(`/api/apps/icon/${encodeURIComponent(containerName)}`, {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            if (response.ok && data.success) {
+                showToast('Icon updated successfully!', 'success');
+                loadDashboardApps(); // Refresh dashboard
+            } else {
+                showToast('Failed to update icon: ' + (data.error || 'Unknown error'), 'error');
+            }
+        } catch (error) {
+            showToast('Error uploading icon: ' + error.message, 'error');
+        }
+    };
+    input.click();
 }
 
 async function saveDashboardDockerPorts() {

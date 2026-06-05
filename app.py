@@ -5425,7 +5425,18 @@ def get_dashboard_apps():
             
             # Fallback nama dan icon
             display_name = meta.get('name', container_name).replace('-', ' ')
-            icon_url = meta.get('icon', dynamic_icon)
+            
+            # Check for custom icon
+            safe_name = container_name.replace('/', '_').replace('\\', '_').replace('..', '_')
+            custom_icon_url = None
+            icons_dir = os.path.join(DATA_DIR, 'container_icons')
+            if os.path.exists(icons_dir):
+                for f in os.listdir(icons_dir):
+                    if f.startswith(safe_name + '.'):
+                        custom_icon_url = f"/api/apps/icon/{container_name}?t={int(time.time())}"
+                        break
+                        
+            icon_url = custom_icon_url or meta.get('icon', dynamic_icon)
             
             # Create dashboard item
             dashboard_item = {
