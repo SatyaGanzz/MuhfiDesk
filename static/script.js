@@ -643,6 +643,9 @@ function renderDashboardApps(apps) {
                 <div class="option-item" onclick="editDockerPort('${dockerTarget}')">
                     <i class="fa-solid fa-pen-to-square"></i> Edit Port
                 </div>
+                <div class="option-item" onclick="editDockerImage('${dockerTarget}')">
+                    <i class="fa-solid fa-image"></i> Edit Image
+                </div>
                 <div class="option-item text-danger" onclick="uninstallDockerApp('${dockerTarget}')">
                     <i class="fa-solid fa-trash"></i> Uninstall
                 </div>
@@ -1028,6 +1031,11 @@ function showToast(message, type = 'success') {
     }, 1500);
 }
 
+function editDockerImage(containerName) {
+    // Placeholder function for the user to implement the backend logic later
+    alert("Backend functionality for editing image will be implemented here.");
+}
+
 async function saveDashboardDockerPorts() {
     const appId = document.getElementById('docker-port-app-id').value;
     const networkMode = document.getElementById('docker-port-network').value;
@@ -1068,11 +1076,64 @@ async function saveDashboardDockerPorts() {
     }
 }
 
+function confirmUninstallAsync(appId) {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); z-index:99999; display:flex; justify-content:center; align-items:center; opacity:0; transition:opacity 0.2s;';
+        
+        const card = document.createElement('div');
+        card.style.cssText = 'background:var(--bg-elevated, #1c2128); border:1px solid var(--glass-border, rgba(255,255,255,0.1)); border-radius:12px; padding:2rem; width:400px; max-width:90%; box-shadow:0 12px 40px rgba(0,0,0,0.5); transform:translateY(20px); transition:transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); color:var(--text-main, #fff); text-align:center;';
+        
+        card.innerHTML = `
+            <i class="fa-solid fa-triangle-exclamation" style="font-size:3.5rem; color:#ff6b6b; margin-bottom:1.5rem;"></i>
+            <div style="font-weight:600; font-size:1.15rem; margin-bottom:0.5rem;">Uninstall Aplikasi</div>
+            <div style="color:var(--text-muted); font-size:0.95rem; margin-bottom:1.5rem; line-height:1.5;">
+                Apakah Anda yakin ingin menghapus aplikasi <b>${appId}</b>? Data container akan hilang secara permanen!
+            </div>
+            <div style="display:flex; justify-content:center; gap:1rem;">
+                <button id="custom-confirm-cancel" style="background:rgba(255,255,255,0.1); border:1px solid var(--glass-border); color:#fff; padding:0.6rem 1.5rem; border-radius:6px; cursor:pointer; font-weight:600; transition:all 0.2s;">Batal</button>
+                <button id="custom-confirm-ok" style="background:#da3633; border:none; color:#fff; font-weight:600; padding:0.6rem 1.5rem; border-radius:6px; cursor:pointer; transition:all 0.2s;">Uninstall</button>
+            </div>
+        `;
+        
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+        
+        const btnCancel = document.getElementById('custom-confirm-cancel');
+        const btnOk = document.getElementById('custom-confirm-ok');
+
+        btnCancel.onmouseover = () => btnCancel.style.background = 'rgba(255,255,255,0.2)';
+        btnCancel.onmouseout = () => btnCancel.style.background = 'rgba(255,255,255,0.1)';
+        
+        btnOk.onmouseover = () => btnOk.style.background = '#b32d2a';
+        btnOk.onmouseout = () => btnOk.style.background = '#da3633';
+        
+        function close(result) {
+            overlay.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                overlay.remove();
+                resolve(result);
+            }, 200);
+        }
+        
+        btnCancel.onclick = () => close(false);
+        btnOk.onclick = () => close(true);
+        
+        setTimeout(() => {
+            overlay.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+            btnOk.focus();
+        }, 10);
+    });
+}
+
 async function uninstallDockerApp(appId) {
-    if (!confirm('Apakah Anda yakin ingin menghapus (uninstall) aplikasi ' + appId + '? Data container akan hilang!')) {
-        return;
-    }
+    const confirmed = await confirmUninstallAsync(appId);
+    if (!confirmed) return;
     
+    showToast('Proses uninstall aplikasi ' + appId + ' sedang berjalan...', 'success');
+
     try {
         const response = await fetch('/api/apps/action', {
             method: 'POST',
@@ -1087,14 +1148,14 @@ async function uninstallDockerApp(appId) {
         
         const data = await response.json();
         if (response.ok) {
-            alert('Aplikasi berhasil dihapus.');
+            showToast('Aplikasi ' + appId + ' berhasil dihapus secara permanen.', 'success');
             loadDashboardApps(); // Refresh the dashboard
             if (typeof refreshDockerStatus === 'function') refreshDockerStatus();
         } else {
-            alert('Gagal menghapus aplikasi: ' + (data.error || 'Unknown error'));
+            showToast('Gagal menghapus aplikasi: ' + (data.error || 'Unknown error'), 'error');
         }
     } catch (error) {
         console.error('Uninstall error:', error);
-        alert('Terjadi kesalahan saat menghubungi server.');
+        showToast('Terjadi kesalahan saat menghubungi server.', 'error');
     }
 }
