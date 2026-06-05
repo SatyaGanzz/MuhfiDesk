@@ -506,7 +506,7 @@
                 <input type="checkbox" id="read-only" onchange="toggleReadOnly(this.checked)"> Read-Only
             </label>
             <span id="readonly-badge" class="readonly-badge" style="display:none">READ-ONLY</span>
-            <span style="margin-left:auto; color:#666">Ctrl+C to interrupt • Double-click tab to rename</span>
+            <span style="margin-left:auto; color:#666">Ctrl+C to interrupt • Right-click to paste</span>
         </div>
     </div>
 
@@ -564,13 +564,11 @@ Restart App=systemctl restart myapp"></textarea>
             tabBtn.id = 'tab-btn-' + sessionId;
             tabBtn.innerHTML = `
                 <i class="fa-solid fa-terminal" style="font-size:0.7rem; opacity:0.7"></i>
-                <span class="tab-name" contenteditable="true" spellcheck="false" 
-                    onblur="saveTabName('${sessionId}', this.textContent)"
-                    onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">${tabName}</span>
+                <span class="tab-name">${tabName}</span>
                 <span class="close-tab" onclick="closeTab('${sessionId}', event)"><i class="fa-solid fa-xmark"></i></span>
             `;
             tabBtn.onclick = (e) => {
-                if (!e.target.classList.contains('close-tab') && !e.target.closest('.close-tab') && !e.target.classList.contains('tab-name')) {
+                if (!e.target.classList.contains('close-tab') && !e.target.closest('.close-tab')) {
                     switchTab(sessionId);
                 }
             };
