@@ -485,6 +485,10 @@
                     onclick="quickCmd('export TERM=xterm && screen /dev/ttyACM1 115200')">
                     <i class="fa-solid fa-bolt"></i> CONNECT SERIAL
                 </button>
+                <button class="quick-btn" style="border-color: rgba(162, 155, 254, 0.3); color: #a29bfe"
+                    onclick="quickCmd('sudo muhfidesk update')">
+                    <img src="{{ url_for('static', filename='favicon.svg') }}" style="width: 14px; height: 14px; margin-right: 4px;"> UPDATE MUHFIDESK
+                </button>
             </div>
 
             <!-- Custom Commands -->
