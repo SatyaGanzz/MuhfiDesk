@@ -270,6 +270,12 @@
 
         .terminal-wrap .xterm {
             height: 100%;
+            width: 100%;
+        }
+
+        .terminal-wrap .xterm-screen,
+        .terminal-wrap .xterm-viewport {
+            width: 100% !important;
         }
         
         .xterm-viewport::-webkit-scrollbar { width: 10px; }
@@ -612,7 +618,8 @@ Restart App=systemctl restart myapp"></textarea>
             const fitAddon = new FitAddon.FitAddon();
             term.loadAddon(fitAddon);
             term.open(termWrap);
-            fitAddon.fit();
+            // Delay fit so the DOM has time to render at full width
+            setTimeout(() => fitAddon.fit(), 50);
 
             // Handle resize
             const resizeObserver = new ResizeObserver(() => {
