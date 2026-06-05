@@ -1851,7 +1851,7 @@ def docker_containers():
                      
                      # Simple logic: Check against known apps in app_catalog
                      # We need to read app_catalog.json
-                     catalog_path = os.path.join(DATA_DIR, 'app_catalog.json')
+                     catalog_path = os.path.join(BASE_DIR, 'store_apps', 'catalog.json')
                      if os.path.exists(catalog_path):
                          with open(catalog_path, 'r') as f:
                              catalog = json.load(f)
@@ -4304,7 +4304,7 @@ PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -t nat -D POSTROUTING -
 # ============ APP STORE ============
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, 'data')
-CATALOG_FILE = os.path.join(DATA_DIR, 'app_catalog.json')
+CATALOG_FILE = os.path.join(BASE_DIR, 'store_apps', 'catalog.json')
 USER_CATALOG_FILE = os.path.join(DATA_DIR, 'user_apps.json')
 CASAOS_CATALOG_FILE = os.path.join(DATA_DIR, 'casaos_apps.json')
 INSTALLED_APPS_FILE = os.path.join(DATA_DIR, 'installed_apps.json')
@@ -4493,7 +4493,7 @@ def add_store_source():
                     
         if new_apps:
             # Append to app_catalog.json
-            catalog_path = os.path.join(DATA_DIR, 'app_catalog.json')
+            catalog_path = os.path.join(BASE_DIR, 'store_apps', 'catalog.json')
             existing_catalog = []
             if os.path.exists(catalog_path):
                 try:
@@ -4525,7 +4525,7 @@ def get_app_catalog():
         # 1. Load Default Catalog
         target = CATALOG_FILE
         if not os.path.exists(CATALOG_FILE):
-             fallback_path = os.path.join(os.getcwd(), 'data', 'app_catalog.json')
+             fallback_path = os.path.join(os.getcwd(), 'store_apps', 'catalog.json')
              if os.path.exists(fallback_path):
                  target = fallback_path
         
