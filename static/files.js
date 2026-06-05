@@ -479,8 +479,57 @@ function hideContextMenu() {
 }
 
 // Actions
-function createNew(type) {
-    const name = prompt(`Enter name for new ${type}:`);
+function promptAsync(message, defaultValue = '') {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); z-index:99999; display:flex; justify-content:center; align-items:center; opacity:0; transition:opacity 0.2s;';
+        
+        const card = document.createElement('div');
+        card.style.cssText = 'background:var(--bg-elevated, #1c2128); border:1px solid var(--glass-border, rgba(255,255,255,0.1)); border-radius:12px; padding:1.5rem; width:400px; max-width:90%; box-shadow:0 12px 40px rgba(0,0,0,0.5); transform:translateY(20px); transition:transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); color:var(--text-main, #fff);';
+        
+        card.innerHTML = `
+            <div style="font-weight:600; margin-bottom:1rem; font-size:1.1rem;">${message}</div>
+            <input type="text" id="custom-prompt-input" value="${defaultValue}" style="width:100%; padding:0.6rem 0.8rem; border-radius:6px; border:1px solid var(--glass-border, rgba(255,255,255,0.2)); background:rgba(0,0,0,0.2); color:#fff; font-family:inherit; outline:none; margin-bottom:1.5rem;" autocomplete="off">
+            <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
+                <button id="custom-prompt-cancel" style="background:rgba(255,255,255,0.1); border:none; color:#fff; padding:0.5rem 1rem; border-radius:6px; cursor:pointer;">Cancel</button>
+                <button id="custom-prompt-ok" style="background:var(--accent, #58a6ff); border:none; color:#0f1117; font-weight:600; padding:0.5rem 1rem; border-radius:6px; cursor:pointer;">OK</button>
+            </div>
+        `;
+        
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+        
+        const input = document.getElementById('custom-prompt-input');
+        const btnCancel = document.getElementById('custom-prompt-cancel');
+        const btnOk = document.getElementById('custom-prompt-ok');
+        
+        setTimeout(() => {
+            overlay.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+            input.focus();
+            input.select();
+        }, 10);
+        
+        function close(val) {
+            overlay.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                overlay.remove();
+                resolve(val);
+            }, 200);
+        }
+        
+        btnCancel.onclick = () => close(null);
+        btnOk.onclick = () => close(input.value);
+        input.onkeydown = (e) => {
+            if (e.key === 'Enter') close(input.value);
+            if (e.key === 'Escape') close(null);
+        };
+    });
+}
+
+async function createNew(type) {
+    const name = await promptAsync(`Enter name for new ${type}:`);
     if (!name) return;
 
     const path = currentPath === '/' ? `/${name}` : `${currentPath}/${name}`;
@@ -495,10 +544,10 @@ function createNew(type) {
     }).then(refreshAfterAction);
 }
 
-function renameItem() {
+async function renameItem() {
     hideContextMenu();
     if (!selectedItem) return;
-    const newName = prompt("Rename to:", selectedItem.name);
+    const newName = await promptAsync("Rename to:", selectedItem.name);
     if (!newName || newName === selectedItem.name) return;
 
     const dir = currentPath === '/' ? '' : currentPath;
