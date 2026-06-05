@@ -253,7 +253,8 @@
 
         .terminal-wrap {
             flex: 1;
-            padding: 0;
+            padding: 10px 15px;
+            box-sizing: border-box;
             display: none;
             background: #15151e;
             overflow: hidden;
@@ -638,6 +639,23 @@ Restart App=systemctl restart myapp"></textarea>
                         session_id: sessionId,
                         input: data
                     });
+                }
+            });
+
+            // Right-click to paste
+            termWrap.addEventListener('contextmenu', async (e) => {
+                e.preventDefault();
+                if (isReadOnly) return;
+                try {
+                    const text = await navigator.clipboard.readText();
+                    if (text) {
+                        socket.emit('terminal_input', {
+                            session_id: sessionId,
+                            input: text
+                        });
+                    }
+                } catch (err) {
+                    console.warn('Clipboard paste failed:', err);
                 }
             });
 
