@@ -992,6 +992,41 @@ async function editDockerPort(appId) {
     }
 }
 
+function showToast(message, type = 'success') {
+    const existing = document.getElementById('custom-toast');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'custom-toast';
+    toast.style.cssText = `
+        position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px);
+        background: var(--bg-elevated, #1c2128); color: var(--text-main, #e6edf3);
+        padding: 12px 24px; border-radius: 50px;
+        border: 1px solid var(--glass-border, rgba(255,255,255,0.1));
+        box-shadow: 0 10px 40px rgba(0,0,0,0.5); z-index: 99999;
+        font-family: inherit; font-size: 0.95rem; font-weight: 500;
+        opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        display: flex; align-items: center; gap: 10px;
+    `;
+
+    let icon = '<i class="fa-solid fa-circle-check" style="color: #3fb950;"></i>';
+    if (type === 'error') icon = '<i class="fa-solid fa-circle-exclamation" style="color: #ff6b6b;"></i>';
+
+    toast.innerHTML = `${icon} <span>${message}</span>`;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+        toast.style.opacity = '1';
+    }, 10);
+
+    setTimeout(() => {
+        toast.style.transform = 'translateX(-50%) translateY(100px)';
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 400);
+    }, 1500);
+}
+
 async function saveDashboardDockerPorts() {
     const appId = document.getElementById('docker-port-app-id').value;
     const networkMode = document.getElementById('docker-port-network').value;
@@ -1021,11 +1056,11 @@ async function saveDashboardDockerPorts() {
         if (!response.ok || !data.success) throw new Error(data.error || 'Update failed');
 
         closeDockerPortModal();
-        alert('Port berhasil diubah. Container sedang restart.');
+        showToast('Port berhasil diubah. Container sedang restart.', 'success');
         loadDashboardApps();
         if (typeof refreshDockerStatus === 'function') refreshDockerStatus();
     } catch (error) {
-        alert('Gagal mengubah port: ' + error.message);
+        showToast('Gagal mengubah port: ' + error.message, 'error');
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
