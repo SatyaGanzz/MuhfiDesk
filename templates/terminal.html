@@ -36,6 +36,7 @@
             height: 100vh;
             padding: 1rem;
             gap: 1rem;
+            overflow: hidden;
         }
 
         /* Header / Glass Panel */
@@ -218,6 +219,7 @@
             display: flex;
             flex-direction: column;
             position: relative;
+            min-height: 0;
         }
 
         /* Terminal Window Bar */
@@ -258,6 +260,8 @@
             display: none;
             background: #15151e;
             overflow: hidden;
+            /* Compensate for the ::before title bar (40px) so xterm fills correctly */
+            min-height: 0;
         }
 
         .terminal-wrap.active {
@@ -585,6 +589,8 @@ Restart App=systemctl restart myapp"></textarea>
                 cursorBlink: true,
                 fontSize: currentFontSize,
                 fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+                scrollback: 5000,
+                scrollOnUserInput: true,
                 theme: {
                     background: '#15151e',
                     foreground: '#d0d0d0',
@@ -794,7 +800,10 @@ Restart App=systemctl restart myapp"></textarea>
         socket.on('terminal_output', data => {
             const sessionId = data.session_id;
             if (terminals[sessionId]) {
-                terminals[sessionId].term.write(data.data);
+                terminals[sessionId].term.write(data.data, () => {
+                    // Scroll to bottom after every output so cursor stays visible
+                    terminals[sessionId].term.scrollToBottom();
+                });
             }
         });
 

@@ -46,7 +46,7 @@ except ImportError:
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # ============ VERSI APLIKASI ============
-APP_VERSION = "1.0"
+APP_VERSION = "1.1"
 APP_NAME = "MuhfiDesk"
 UPDATE_CHECK_URL = "https://raw.githubusercontent.com/SatyaGanzz/muhfidesk/main/version.json"
 # ========================================
@@ -66,7 +66,7 @@ IS_ACTIVATED = False  # Cache validation status
 
 # Update Check URL (Administrator configurable via Code or ENV)
 UPDATE_CHECK_URL = os.environ.get('UPDATE_URL', "https://raw.githubusercontent.com/SatyaGanzz/muhfidesk/main/version.json")
-CURRENT_VERSION = "1.0"
+CURRENT_VERSION = "1.1"
 
 def energy_monitor_loop():
     global TOTAL_KWH
