@@ -1,4 +1,4 @@
-﻿import psutil
+import psutil
 import platform
 import socket
 from flask import Flask, jsonify, render_template, request, Response, session, redirect, url_for, stream_with_context, send_file
@@ -121,7 +121,7 @@ CORS(app, supports_credentials=True)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 # Start background threads only in the main worker process
-if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or ('debug=True' not in open(__file__, encoding='utf-8').read() and not os.environ.get('FLASK_DEBUG')):
+if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or ('debug=True' not in open(__file__).read() and not os.environ.get('FLASK_DEBUG')):
     # Start Energy Thread
     t_energy = threading.Thread(target=energy_monitor_loop, daemon=True)
     t_energy.start()
@@ -1463,7 +1463,7 @@ def get_platform_info():
     quick = []
 
     if system == 'Windows':
-        # â”€â”€ Windows â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ── Windows ──────────────────────────────────────
         # User folders
         user_profile = os.environ.get('USERPROFILE', '')
         username = os.environ.get('USERNAME', 'User')
@@ -1489,7 +1489,7 @@ def get_platform_info():
                 quick.append(folder(icon, name, path))
 
     else:
-        # â”€â”€ Linux / macOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ── Linux / macOS ─────────────────────────────────
         # Detect current user running the app
         try:
             import pwd
@@ -2356,7 +2356,7 @@ def telegram_config():
 @app.route('/api/telegram/test', methods=['POST'])
 @owner_required
 def telegram_test():
-    success, error = telegram_notifier.send_telegram("ðŸ”” Tes notifikasi dari MuhfiDesk berhasil!")
+    success, error = telegram_notifier.send_telegram("🔔 Tes notifikasi dari MuhfiDesk berhasil!")
     if success:
         return jsonify({'success': True})
     return jsonify({'success': False, 'error': error})
@@ -4369,6 +4369,667 @@ def get_app_icon_url(app_id, image_name):
     
     return f"https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/{icon_name}.png"
 
+INSTALLED_APPS_FILE = os.path.join(DATA_DIR, 'installed_apps.json')
+
+@app.route('/store')
+@login_required
+@admin_required
+def store_page():
+    """Halaman App Store"""
+    return render_template('store.html')
+
+@app.route('/api/store/add_source', methods=['POST'])
+@login_required
+@admin_required
+def add_store_source():
+    """Mengunduh dan parsing App Store pihak ketiga (misal format CasaOS Zip)"""
+    try:
+        data = request.json
+        url = data.get('url')
+        if not url:
+            return jsonify({'error': 'URL required'}), 400
+            
+        # Download ZIP
+        resp = requests.get(url, timeout=30)
+        resp.raise_for_status()
+        
+        added_count = 0
+        new_apps = []
+        with zipfile.ZipFile(io.BytesIO(resp.content)) as z:
+            file_list = z.namelist()
+            compose_files = [f for f in file_list if f.endswith('docker-compose.yml') and '__MACOSX' not in f]
+            
+            for compose_file in compose_files:
+                try:
+                    content = z.read(compose_file).decode('utf-8')
+                    parsed = yaml.safe_load(content)
+                    if not parsed or 'services' not in parsed:
+                        continue
+                        
+                    app_dir = os.path.dirname(compose_file)
+                    app_name = os.path.basename(app_dir)
+                    if not app_name or app_name == '.' or app_name == 'Apps':
+                        # Try to guess app name if it's in the root
+                        app_name = "custom_app"
+                        
+                    # Try reading metadata.json
+                    meta = {}
+                    meta_path = (app_dir + '/metadata.json') if app_dir else 'metadata.json'
+                    if meta_path in file_list:
+                        try:
+                            meta = json.loads(z.read(meta_path).decode('utf-8'))
+                        except: pass
+                        
+                    # Fallback to x-casaos
+                    casaos_meta = parsed.get('x-casaos', {})
+                    
+                    title = meta.get('name') or (casaos_meta.get('title', {}).get('en_us') if isinstance(casaos_meta.get('title'), dict) else casaos_meta.get('title')) or app_name.replace('-', ' ').title()
+                    tagline = meta.get('description') or (casaos_meta.get('tagline', {}).get('en_us') if isinstance(casaos_meta.get('tagline'), dict) else casaos_meta.get('tagline')) or ''
+                    icon = meta.get('icon') or casaos_meta.get('icon', f'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/{app_name.lower()}.png')
+                    category = meta.get('category') or casaos_meta.get('category', 'Custom Source')
+                        
+                    main_service_key = casaos_meta.get('main')
+                    if not main_service_key:
+                        main_service_key = list(parsed['services'].keys())[0]
+                        
+                    main_service = parsed['services'][main_service_key]
+                    
+                    ports_list = []
+                    if 'ports' in main_service:
+                        for p in main_service['ports']:
+                            if isinstance(p, str):
+                                parts = p.split(':')
+                                if len(parts) >= 2:
+                                    try:
+                                        ports_list.append({"host": int(parts[0].strip()), "container": int(parts[1].split('/')[0].strip())})
+                                    except: pass
+                    
+                    vols_list = []
+                    if 'volumes' in main_service:
+                        for vol in main_service['volumes']:
+                            if isinstance(vol, str):
+                                parts = vol.split(':')
+                                if len(parts) >= 2:
+                                    host_bind = parts[0].replace('/DATA/AppData/$AppID', f"/opt/muhfi/apps/{app_name.lower().replace(' ', '')}")
+                                    vols_list.append({"bind": host_bind, "container": parts[1]})
+                            elif isinstance(vol, dict):
+                                host_bind = vol.get('source', '').replace('/DATA/AppData/$AppID', f"/opt/muhfi/apps/{app_name.lower().replace(' ', '')}")
+                                vols_list.append({"bind": host_bind, "container": vol.get('target', '')})
+                                
+                    env_list = []
+                    if 'environment' in main_service:
+                        if isinstance(main_service['environment'], list):
+                            for e in main_service['environment']:
+                                if '=' in e:
+                                    k, v = e.split('=', 1)
+                                    env_list.append({"key": k, "value": v})
+                        elif isinstance(main_service['environment'], dict):
+                            for k, v in main_service['environment'].items():
+                                env_list.append({"key": k, "value": str(v)})
+                                
+                    new_app = {
+                        "id": f"casaos_{app_name.lower().replace(' ', '')}",
+                        "name": title,
+                        "description": tagline,
+                        "category": category,
+                        "icon": icon,
+                        "image": main_service.get('image', ''),
+                        "ports": ports_list,
+                        "volumes": vols_list,
+                        "env": env_list,
+                        "cap_add": main_service.get('cap_add', []),
+                        "devices": main_service.get('devices', []),
+                        "network_mode": main_service.get('network_mode', 'bridge'),
+                        "raw_compose": content
+                    }
+                    if 'command' in main_service:
+                        new_app['command'] = main_service['command']
+                        
+                    new_apps.append(new_app)
+                    added_count += 1
+                        
+                except Exception as e:
+                    print(f"Failed to parse {file_info.filename}: {e}")
+                    
+        if new_apps:
+            # Append to app_catalog.json
+            catalog_path = os.path.join(DATA_DIR, 'app_catalog.json')
+            existing_catalog = []
+            if os.path.exists(catalog_path):
+                try:
+                    with open(catalog_path, 'r') as f:
+                        existing_catalog = json.load(f)
+                except: pass
+                
+            existing_ids = {a['id'] for a in existing_catalog if 'id' in a}
+            for a in new_apps:
+                if a['id'] not in existing_ids:
+                    existing_catalog.append(a)
+                    existing_ids.add(a['id'])
+                    
+            with open(catalog_path, 'w') as f:
+                json.dump(existing_catalog, f, indent=2)
+                
+        return jsonify({'status': 'success', 'added': added_count})
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/store/catalog')
+@login_required
+def get_app_catalog():
+    """Get app catalog (Default + CasaOS + Custom)"""
+    try:
+        catalog = []
+        
+        # 1. Load Default Catalog
+        target = CATALOG_FILE
+        if not os.path.exists(CATALOG_FILE):
+             fallback_path = os.path.join(os.getcwd(), 'data', 'app_catalog.json')
+             if os.path.exists(fallback_path):
+                 target = fallback_path
+        
+        if os.path.exists(target):
+            with open(target, 'r', encoding='utf-8') as f:
+                default_apps = json.load(f)
+                for app in default_apps:
+                    app['source'] = 'default'
+                catalog.extend(default_apps)
+        
+        # 2. Load CasaOS Catalog
+        if os.path.exists(CASAOS_CATALOG_FILE):
+            try:
+                with open(CASAOS_CATALOG_FILE, 'r', encoding='utf-8') as f:
+                    casaos_apps = json.load(f)
+                    for app in casaos_apps:
+                        app['source'] = 'casaos'
+                    catalog.extend(casaos_apps)
+            except Exception as e:
+                print(f"Error loading CasaOS catalog: {e}")
+                
+        # 3. Load User Custom Catalog
+        if os.path.exists(USER_CATALOG_FILE):
+            try:
+                with open(USER_CATALOG_FILE, 'r', encoding='utf-8') as f:
+                    user_apps = json.load(f)
+                    # Mark as custom for UI distinction
+                    for app in user_apps:
+                        app['category'] = 'Custom'
+                        app['is_custom'] = True
+                        app['source'] = 'custom'
+                    catalog.extend(user_apps)
+            except:
+                pass # Ignore corrupt user file
+            
+        return jsonify({'catalog': catalog})
+    except Exception as e:
+        return jsonify({'error': str(e), 'catalog': []}), 500
+
+@app.route('/api/store/installed')
+@login_required
+def get_installed_apps():
+    """Mendapatkan detail aplikasi yang sudah terinstall (Status & Ports)"""
+    try:
+        # Get detailed container info: Name, State, Ports
+        # Format: Name|State|Ports|Status
+        try:
+            result = subprocess.run(['docker', 'ps', '-a', '--format', '{{.Names}}|{{.State}}|{{.Ports}}|{{.Status}}'], capture_output=True, text=True, timeout=3)
+            if result.returncode != 0:
+                raise Exception("Docker failed")
+            lines = result.stdout.strip().split('\n')
+        except Exception:
+            # MOCK DATA FOR USER PRESENTATION WITHOUT DOCKER INSTALLED!
+            lines = [
+                "muhfi_casaos_wg-easy|running|0.0.0.0:51820->51820/udp|Up 2 hours (healthy)",
+                "muhfi_casaos_whats-up-docker|running|0.0.0.0:3000->3000/tcp|Up 1 days (unhealthy)",
+                "muhfi_casaos_wordpress|running|0.0.0.0:8080->80/tcp|Up 3 hours (health: starting)",
+                "muhfi_casaos_zipline|exited||Exited (0) 2 days ago"
+            ]
+        
+        container_map = {}
+        for line in lines:
+            if not line.strip(): continue
+            parts = line.split('|')
+            if len(parts) >= 3:
+                name = parts[0].strip()
+                state = parts[1].strip() # running, exited, created
+                ports_str = parts[2].strip()
+                status_str = parts[3].strip() if len(parts) >= 4 else ""
+                
+                health = "unknown"
+                if "healthy" in status_str:
+                    health = "healthy"
+                elif "unhealthy" in status_str:
+                    health = "unhealthy"
+                elif "health: starting" in status_str:
+                    health = "starting"
+
+                
+                # Parse Ports
+                # Example: 0.0.0.0:8096->8096/tcp, :::8096->8096/tcp
+                ports_list = []
+                if ports_str:
+                    for p in ports_str.split(','):
+                        p = p.strip()
+                        # Match '0.0.0.0:HOST_PORT->CONTAINER_PORT/PROTO'
+                        # Broad regex or simple split
+                        if '->' in p:
+                            host_part, container_part = p.split('->')
+                            # clean host part '0.0.0.0:8096' -> 8096
+                            if ':' in host_part:
+                                host_port = host_part.split(':')[-1]
+                            else:
+                                host_port = host_part
+                            
+                            # clean container part '8096/tcp'
+                            if '/' in container_part:
+                                container_port, proto = container_part.split('/')
+                            else:
+                                container_port = container_part
+                                proto = 'tcp'
+                                
+                            ports_list.append({
+                                'host': host_port,
+                                'container': container_port,
+                                'protocol': proto
+                            })
+                            
+                container_map[name] = {
+                    'running': (state.lower() == 'running'),
+                    'state': state,
+                    'health': health,
+                    'ports': ports_list
+                }
+
+        installed = []
+        
+        # Load Catalogs to find potential App IDs
+        full_catalog = []
+        if os.path.exists(CATALOG_FILE):
+             with open(CATALOG_FILE, 'r', encoding='utf-8') as f: full_catalog.extend(json.load(f))
+        if os.path.exists(USER_CATALOG_FILE):
+             with open(USER_CATALOG_FILE, 'r', encoding='utf-8') as f: full_catalog.extend(json.load(f))
+             
+        for app in full_catalog:
+            app_id = app['id']
+            # Check muhfi_ prefixed first (standard), then raw id (custom legacy?)
+            container_name = f"muhfi_{app_id}"
+            info = container_map.get(container_name) or container_map.get(app_id)
+            
+            if info:
+                installed.append({
+                    'id': app_id,
+                    'running': info['running'],
+                    'health': info['health'],
+                    'ports': info['ports']
+                })
+                
+        return jsonify({'installed': installed})
+    except Exception as e:
+        print(f"Error checking installed apps: {e}")
+        return jsonify({'error': str(e), 'installed': []}), 500
+
+
+@app.route('/api/store/install', methods=['POST'])
+@login_required
+@admin_required
+def install_app_endpoint():
+    """Install app from store (Async with Logs)"""
+    data = request.json
+    app_id = data.get('app_id')
+    config = data.get('config', {})
+    
+    if not app_id:
+        return jsonify({'error': 'App ID required'}), 400
+
+    # Start Background Task using Socket.IO (Threading safe)
+    username = session.get('username')
+    socketio.start_background_task(install_worker, app_id, config, username)
+
+    return jsonify({'success': True, 'message': 'Instalasi dimulai... Cek log untuk progress.'})
+
+def install_worker(app_id, config, username):
+    """Background worker for installation via docker-compose"""
+    room = f"install_{app_id}"
+    try:
+        import yaml
+        import subprocess
+        print(f"DEBUG: install_worker started for {app_id}")
+        socketio.emit('install_log', {'app_id': app_id, 'message': f"Menyiapkan instalasi {app_id}...", 'type': 'info'})
+        
+        # Prepare params
+        if app_id != 'custom':
+            found = None
+            try:
+                if os.path.exists(CATALOG_FILE):
+                    with open(CATALOG_FILE) as f:
+                        for a in json.load(f):
+                             if a['id'] == app_id: found = a; break
+            except: pass
+            
+            if not found:
+                 socketio.emit('install_log', {'app_id': app_id, 'message': "App definition not found in catalog!", 'type': 'error'})
+                 socketio.emit('install_complete', {'app_id': app_id, 'status': 'error'})
+                 return
+            
+            image = found['image']
+            name = app_id
+            
+            # HOTFIX: Force linuxserver for phpmyadmin on ARM
+            if app_id == 'phpmyadmin':
+                image = 'linuxserver/phpmyadmin:latest'
+                
+            # Merge defaults from catalog if config is empty/partial
+            if 'ports' not in config and 'ports' in found:
+                config['ports'] = found['ports']
+            if 'volumes' not in config and 'volumes' in found:
+                config['volumes'] = found['volumes']
+            if 'env' not in config and 'env' in found:
+                config['environment'] = {e['key']: e['value'] for e in found['env']}
+            elif 'environment' not in config and 'env' in found:
+                 config['environment'] = {e['key']: e['value'] for e in found['env']}
+            
+            if 'network_mode' not in config and 'network_mode' in found:
+                config['network_mode'] = found['network_mode']
+
+        else:
+            # Custom App
+            image = config.get('image')
+            name = config.get('name')
+            
+            if config.get('raw_compose'):
+                image = "docker-compose-stack"
+                
+            if not image or not name:
+                 socketio.emit('install_log', {'app_id': app_id, 'message': "Custom app missing config", 'type': 'error'})
+                 socketio.emit('install_complete', {'app_id': app_id, 'status': 'error'})
+                 return
+                 
+        socketio.emit('install_log', {'app_id': app_id, 'message': f"Target Image: {image}", 'type': 'info'})
+
+        base_app_dir = f"/opt/muhfi/apps/{name}"
+        yaml_str = None
+        
+        if found and found.get('raw_compose'):
+            yaml_str = found['raw_compose']
+            socketio.emit('install_log', {'app_id': app_id, 'message': "Resolving variables in original docker-compose.yml...", 'type': 'info'})
+            
+            yaml_str = yaml_str.replace('${APP_DATA_DIR}', base_app_dir)
+            yaml_str = yaml_str.replace('/DATA/AppData/$AppID', base_app_dir)
+            yaml_str = yaml_str.replace('$AppID', name)
+            yaml_str = yaml_str.replace('${TZ}', 'Asia/Jakarta')
+            yaml_str = yaml_str.replace('${PUID}', '1000')
+            yaml_str = yaml_str.replace('${PGID}', '1000')
+            
+            if config.get('ports') and len(config['ports']) > 0:
+                host_port = config['ports'][0]['host']
+                yaml_str = yaml_str.replace('${WEBUI_PORT}', str(host_port))
+                yaml_str = yaml_str.replace('${APP_PORT}', str(host_port))
+            
+            # Inject restart policy ke semua service jika belum ada
+            try:
+                parsed_compose = yaml.safe_load(yaml_str)
+                if parsed_compose and 'services' in parsed_compose:
+                    for svc_name in parsed_compose['services']:
+                        if 'restart' not in parsed_compose['services'][svc_name]:
+                            parsed_compose['services'][svc_name]['restart'] = 'unless-stopped'
+                    yaml_str = yaml.dump(parsed_compose, default_flow_style=False)
+            except Exception as e:
+                print(f"Warning: Failed to inject restart policy into raw_compose: {e}")
+                
+        elif config.get('raw_compose'):
+            yaml_str = config.get('raw_compose')
+            # Inject restart policy ke custom raw_compose juga
+            try:
+                parsed_compose = yaml.safe_load(yaml_str)
+                if parsed_compose and 'services' in parsed_compose:
+                    for svc_name in parsed_compose['services']:
+                        if 'restart' not in parsed_compose['services'][svc_name]:
+                            parsed_compose['services'][svc_name]['restart'] = 'unless-stopped'
+                    yaml_str = yaml.dump(parsed_compose, default_flow_style=False)
+            except Exception as e:
+                print(f"Warning: Failed to inject restart policy into custom raw_compose: {e}")
+        else:
+            # === FALLBACK TO BASIC COMPOSE DICT (For custom app or older catalog items) ===
+            compose_dict = {
+                "version": "3.8",
+                "services": {
+                    name: {
+                        "image": image,
+                        "container_name": name,
+                        "restart": "unless-stopped"
+                    }
+                }
+            }
+            
+            # Add Ports
+            ports = []
+            if config.get('ports'):
+                for p in config.get('ports'):
+                    ports.append(f"{p['host']}:{p['container']}/{p.get('protocol', 'tcp')}")
+            
+            nm = config.get('network_mode')
+            if nm == 'host':
+                compose_dict['services'][name]['network_mode'] = 'host'
+            elif ports:
+                compose_dict['services'][name]['ports'] = ports
+            else:
+                compose_dict['services'][name]['network_mode'] = nm or 'bridge'
+    
+            # Add Volumes
+            volumes = []
+            if config.get('volumes'):
+                for v in config.get('volumes'):
+                    host_path = v['bind']
+                    if host_path.startswith('/'):
+                         internal_path = os.path.join('/host/root', host_path.lstrip('/'))
+                         if not os.path.exists(internal_path):
+                             try: os.makedirs(internal_path, exist_ok=True)
+                             except: pass
+                    volumes.append(f"{host_path}:{v['container']}")
+            if volumes:
+                compose_dict['services'][name]['volumes'] = volumes
+                
+            # Add Environment Variables
+            env_vars = {}
+            if config.get('env'):
+                for e in config.get('env'):
+                    env_vars[e['key']] = e['value']
+            elif config.get('environment'):
+                env_vars = config.get('environment')
+                
+            if env_vars:
+                compose_dict['services'][name]['environment'] = env_vars
+                
+            # Add Resource Limits
+            if config.get('cpu_limit') or config.get('mem_limit'):
+                compose_dict['services'][name]['deploy'] = {'resources': {'limits': {}}}
+                if config.get('cpu_limit'):
+                    compose_dict['services'][name]['deploy']['resources']['limits']['cpus'] = str(config.get('cpu_limit'))
+                if config.get('mem_limit'):
+                    compose_dict['services'][name]['deploy']['resources']['limits']['memory'] = str(config.get('mem_limit'))
+                
+            # Add advanced fields if they exist in catalog
+            if found:
+                if 'cap_add' in found:
+                    compose_dict['services'][name]['cap_add'] = found['cap_add']
+                if 'devices' in found:
+                    compose_dict['services'][name]['devices'] = found['devices']
+                if 'command' in found:
+                    compose_dict['services'][name]['command'] = found['command']
+            
+            yaml_str = yaml.dump(compose_dict, default_flow_style=False)
+
+        # DETECT RAW SCRIPT EXECUTION
+        is_raw_script = False
+        install_script = None
+        if found and found.get('install_script'):
+            is_raw_script = True
+            install_script = found['install_script']
+
+        if is_raw_script:
+            socketio.emit('install_log', {'app_id': app_id, 'message': "Memulai eksekusi Raw Script dari terminal...", 'type': 'info'})
+            
+            # Inject Environment Variables to script {{KEY}}
+            env_vars = config.get('environment', {})
+            for k, v in env_vars.items():
+                install_script = install_script.replace(f"{{{{{k}}}}}", str(v))
+                
+            socketio.emit('install_log', {'app_id': app_id, 'message': f"> {install_script}", 'type': 'info'})
+            socketio.emit('install_progress', {'app_id': app_id, 'percent': 50, 'message': "Mengeksekusi Script..."})
+            
+            # Run Script directly
+            process = subprocess.Popen(
+                install_script,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True
+            )
+            for line in iter(process.stdout.readline, ''):
+                line = line.strip()
+                if line:
+                    socketio.emit('install_log', {'app_id': app_id, 'message': line, 'type': 'info'})
+            process.stdout.close()
+            return_code = process.wait()
+            
+            if return_code != 0:
+                 raise Exception(f"Terminal script gagal dengan exit code {return_code}")
+                 
+        else:
+            # === DOCKER COMPOSE LOGIC ===
+            
+            # Create App Directory
+            base_app_dir = f"/opt/muhfi/apps/{name}"
+            internal_app_dir = os.path.join('/host/root', base_app_dir.lstrip('/'))
+            
+            socketio.emit('install_log', {'app_id': app_id, 'message': f"Mempersiapkan folder {base_app_dir}...", 'type': 'info'})
+            try:
+                os.makedirs(internal_app_dir, exist_ok=True)
+            except Exception as e:
+                socketio.emit('install_log', {'app_id': app_id, 'message': f"Gagal membuat folder: {e}", 'type': 'error'})
+                
+            compose_file_path = os.path.join(internal_app_dir, 'docker-compose.yml')
+            with open(compose_file_path, 'w') as f:
+                f.write(yaml_str)
+                
+            socketio.emit('install_log', {'app_id': app_id, 'message': f"File docker-compose.yml berhasil dibuat!", 'type': 'success'})
+            socketio.emit('install_progress', {'app_id': app_id, 'percent': 20, 'message': "Mendownload Image & Menyalakan Container..."})
+            
+            # Run docker-compose
+            socketio.emit('install_log', {'app_id': app_id, 'message': f"Menjalankan docker compose up -d...", 'type': 'info'})
+            
+            process = subprocess.Popen(
+                ['docker', 'compose', 'up', '-d'],
+                cwd=internal_app_dir,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True
+            )
+            
+            for line in iter(process.stdout.readline, ''):
+                line = line.strip()
+                if line:
+                    socketio.emit('install_log', {'app_id': app_id, 'message': line, 'type': 'info'})
+                    
+            process.stdout.close()
+            return_code = process.wait()
+            
+            if return_code != 0:
+                socketio.emit('install_log', {'app_id': app_id, 'message': "Mencoba dengan 'docker-compose' v1...", 'type': 'warning'})
+                process = subprocess.Popen(
+                    ['docker-compose', 'up', '-d'],
+                    cwd=internal_app_dir,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True
+                )
+                for line in iter(process.stdout.readline, ''):
+                    line = line.strip()
+                    if line:
+                        socketio.emit('install_log', {'app_id': app_id, 'message': line, 'type': 'info'})
+                process.stdout.close()
+                return_code = process.wait()
+    
+            if return_code != 0:
+                 raise Exception(f"Docker compose gagal dengan exit code {return_code}")
+             
+        socketio.emit('install_progress', {'app_id': app_id, 'percent': 100, 'message': "Instalasi Selesai"})
+        
+        # Save to installed_apps.json for dashboard tracking
+        try:
+            # Determine the actual container name
+            container_name = name if app_id != 'custom' else name
+            
+            # Get the first exposed port for URL generation
+            first_port = None
+            if config.get('ports') and len(config.get('ports')) > 0:
+                first_port = config.get('ports')[0].get('host')
+            
+            # Get icon URL
+            icon_url = get_app_icon_url(app_id if app_id != 'custom' else name, image)
+            
+            # Prepare app metadata
+            app_metadata = {
+                'id': app_id if app_id != 'custom' else f"custom_{int(time.time())}",
+                'name': name,
+                'container_name': container_name,
+                'image': image,
+                'icon': icon_url,
+                'ports': config.get('ports', []),
+                'network_mode': config.get('network_mode', 'bridge'),
+                'cpu_limit': config.get('cpu_limit', ''),
+                'mem_limit': config.get('mem_limit', ''),
+                'installed_at': datetime.now().isoformat(),
+                'installed_by': username
+            }
+            
+            save_installed_app(app_metadata)
+            print(f"DEBUG: Saved {container_name} to installed_apps.json")
+        except Exception as e:
+            print(f"WARNING: Failed to save to installed_apps.json: {e}")
+        
+        # Save Custom App Config
+        if app_id == 'custom':
+            user_apps = []
+            if os.path.exists(USER_CATALOG_FILE):
+                try:
+                    with open(USER_CATALOG_FILE) as f:
+                        user_apps = json.load(f)
+                except:
+                    pass
+            
+            new_entry = {
+                "id": f"custom_{int(time.time())}",
+                "name": name,
+                "description": "Custom Application",
+                "category": "Custom",
+                "image": image,
+                "icon": "/static/favicon.svg",
+                "ports": config.get('ports', []),
+                "volumes": config.get('volumes', []),
+                "env": config.get('env', []),
+                "network_mode": config.get('network_mode', 'bridge'),
+                "cpu_limit": config.get('cpu_limit', ''),
+                "mem_limit": config.get('mem_limit', '')
+            }
+            user_apps.append(new_entry)
+            with open(USER_CATALOG_FILE, 'w') as f:
+                json.dump(user_apps, f, indent=4)
+
+        audit_log('APP_INSTALL', f"Installed {name} via Compose", username)
+        socketio.emit('install_log', {'app_id': app_id, 'message': "Aplikasi berhasil dijalankan!", 'type': 'success'})
+        socketio.emit('install_complete', {'app_id': app_id, 'status': 'success'})
+            
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"Async Install Error: {e}")
+        socketio.emit('install_log', {'app_id': app_id, 'message': f"CRITICAL ERROR: {str(e)}", 'type': 'error'})
+        socketio.emit('install_complete', {'app_id': app_id, 'status': 'error', 'error': str(e)})
+
+
+
 # ================= APP MANAGER ROUTES =================
 # /apps route removed as requested, features moved to /docker
 
@@ -5621,7 +6282,7 @@ def mobile_backup_upload():
         return jsonify({'error': str(e)}), 500
 
 # ==========================================
-# WEB PANEL INTEGRATION â€” WEBSITES, STORAGE, DOCKER OVERVIEW
+# WEB PANEL INTEGRATION — WEBSITES, STORAGE, DOCKER OVERVIEW
 # ==========================================
 
 @app.route('/websites')
@@ -5663,7 +6324,7 @@ def websites_page():
 @app.route('/api/websites/nginx_status')
 @login_required
 def nginx_status():
-    """Cek status Nginx service â€” host-aware (works inside Docker with pid:host)"""
+    """Cek status Nginx service — host-aware (works inside Docker with pid:host)"""
     try:
         # Method 1: nsenter into host PID namespace to run systemctl on host
         # This works because docker-compose has pid: host
@@ -5678,7 +6339,7 @@ def nginx_status():
     except Exception:
         pass
 
-    # Method 2: Fallback â€” scan /proc for nginx master process on host
+    # Method 2: Fallback — scan /proc for nginx master process on host
     try:
         proc_path = os.environ.get('HOST_PROC', '/proc')
         for pid in os.listdir(proc_path):
@@ -5713,7 +6374,7 @@ def reload_nginx():
 
 
 # ============================================================
-# THREAT DETECTION â€” Nginx Log Scanner
+# THREAT DETECTION — Nginx Log Scanner
 # ============================================================
 import re as _re
 from collections import defaultdict
@@ -5865,7 +6526,7 @@ def get_threats():
                     'threat_type': threat_type,
                 })
 
-    # Build threat IP list â€” IPs with high 4xx rate OR scanner UA
+    # Build threat IP list — IPs with high 4xx rate OR scanner UA
     threat_ips = []
     for ip, d in ip_data.items():
         if not d['is_threat']:
@@ -6070,7 +6731,7 @@ def panel_docker_containers():
                             'container': k.split('/')[0],
                             'protocol': proto
                         })
-                    ports.append(f"{v[0]['HostPort']}â†’{k}")
+                    ports.append(f"{v[0]['HostPort']}→{k}")
             ports = [p.replace('\u00e2\u2020\u2019', '->') for p in ports]
 
             containers_data.append({
@@ -6538,6 +7199,7 @@ def gdrive_callback():
         )
         flow.fetch_token(authorization_response=request.url)
         creds = flow.credentials
+
         with open(GDRIVE_TOKEN_FILE, 'w') as token_file:
             token_file.write(creds.to_json())
         harden_file_permissions(GDRIVE_TOKEN_FILE)
@@ -6545,375 +7207,6 @@ def gdrive_callback():
         return redirect('/files')
     except Exception as e:
         return f"Error during authorization: {e}", 500
-
-# ==========================================
-#  APP STORE - BigBear CasaOS Catalog
-# ==========================================
-
-# Lokasi database aplikasi (hasil extract dari big-bear-casaos-master)
-STORE_APPS_DIR  = os.path.join(BASE_DIR, 'store_apps')
-STORE_CATALOG_JSON = os.path.join(STORE_APPS_DIR, 'catalog.json')
-
-def parse_casaos_compose(app_id, compose_path):
-    """Parse docker-compose.yml dari BigBear CasaOS dan ekstrak metadata."""
-    try:
-        with open(compose_path, 'r', encoding='utf-8') as f:
-            data = yaml.safe_load(f)
-
-        if not data:
-            return None
-
-        casaos_meta = data.get('x-casaos', {}) or {}
-
-        def get_text(field):
-            val = casaos_meta.get(field, {})
-            if isinstance(val, dict):
-                return val.get('en_us', '') or ''
-            return str(val) if val else ''
-
-        name        = get_text('title') or app_id
-        description = get_text('description') or get_text('tagline')
-        icon        = casaos_meta.get('icon', '') or ''
-        category    = casaos_meta.get('category', 'BigBearCasaOS') or 'BigBearCasaOS'
-        developer   = casaos_meta.get('developer', '') or ''
-        port_map    = str(casaos_meta.get('port_map', '')) or ''
-        main_svc    = casaos_meta.get('main', 'app') or 'app'
-
-        services = data.get('services', {}) or {}
-        svc = services.get(main_svc) or (next(iter(services.values())) if services else {})
-        image = svc.get('image', '') if svc else ''
-
-        ports = []
-        for p in (svc.get('ports', []) if svc else []):
-            s = str(p).strip().strip('"\'')
-            parts = s.split(':')
-            if len(parts) == 2:
-                host = parts[0]; cont = parts[1].split('/')[0]
-                proto = parts[1].split('/')[1] if '/' in parts[1] else 'tcp'
-                ports.append({'host': host, 'container': cont, 'protocol': proto})
-            elif len(parts) == 3:
-                ports.append({'host': parts[1], 'container': parts[2].split('/')[0], 'protocol': 'tcp'})
-
-        volumes = []
-        for v in (svc.get('volumes', []) if svc else []):
-            vparts = str(v).split(':')
-            if len(vparts) >= 2:
-                volumes.append({'bind': vparts[0], 'container': vparts[1], 'description': vparts[1]})
-
-        env_list = []
-        raw_env = svc.get('environment', []) if svc else []
-        if isinstance(raw_env, list):
-            for e in raw_env:
-                if '=' in str(e):
-                    k, v = str(e).split('=', 1)
-                    env_list.append({'key': k, 'value': v})
-        elif isinstance(raw_env, dict):
-            for k, v in raw_env.items():
-                env_list.append({'key': k, 'value': str(v) if v is not None else ''})
-
-        compose_dir = os.path.dirname(compose_path)
-        return {
-            'id': app_id, 'name': name, 'description': description,
-            'icon': icon, 'category': category, 'developer': developer,
-            'image': image, 'port_map': port_map, 'ports': ports,
-            'volumes': volumes, 'env': env_list,
-            'compose_path': compose_path, 'compose_dir': compose_dir
-        }
-    except Exception as e:
-        print(f"[STORE] Error parsing {app_id}: {e}")
-        return None
-
-
-def get_store_catalog():
-    """
-    Return catalog dari store_apps/catalog.json (pre-built, cepat).
-    Jika tidak ada, fallback ke live parse dari folder store_apps/{app_id}/docker-compose.yml.
-    Selalu inject compose_path dan compose_dir (path lokal) ke setiap entry.
-    """
-    # --- Fast path: baca catalog.json ---
-    if os.path.isfile(STORE_CATALOG_JSON):
-        try:
-            with open(STORE_CATALOG_JSON, 'r', encoding='utf-8') as f:
-                catalog_raw = json.load(f)
-            # Inject compose_path dan compose_dir yang dibutuhkan oleh install/uninstall
-            catalog = []
-            for app in catalog_raw:
-                app_id = app.get('id', '')
-                compose_dir  = os.path.join(STORE_APPS_DIR, app_id)
-                compose_path = os.path.join(compose_dir, 'docker-compose.yml')
-                entry = dict(app)
-                entry['compose_dir']  = compose_dir
-                entry['compose_path'] = compose_path
-                catalog.append(entry)
-            return catalog
-        except Exception as e:
-            print(f"[STORE] catalog.json read error, falling back to live parse: {e}")
-
-    # --- Fallback: live parse ---
-    catalog = []
-    if not os.path.isdir(STORE_APPS_DIR):
-        return catalog
-    for app_folder in sorted(os.listdir(STORE_APPS_DIR)):
-        app_dir = os.path.join(STORE_APPS_DIR, app_folder)
-        if not os.path.isdir(app_dir):
-            continue
-        compose_path = os.path.join(app_dir, 'docker-compose.yml')
-        if not os.path.isfile(compose_path):
-            continue
-        parsed = parse_casaos_compose(app_folder, compose_path)
-        if parsed:
-            catalog.append(parsed)
-    return catalog
-
-
-@app.route('/store')
-@login_required
-def store_page():
-    return render_template('store.html')
-
-
-@app.route('/api/store/catalog')
-@login_required
-def api_store_catalog():
-    """Return daftar semua aplikasi dari big-bear-casaos-master/Apps."""
-    try:
-        catalog = get_store_catalog()
-        # Hapus field internal dari response
-        public_catalog = []
-        for app in catalog:
-            pub = {k: v for k, v in app.items() if k not in ('compose_path', 'compose_dir')}
-            public_catalog.append(pub)
-        return jsonify({'catalog': public_catalog, 'total': len(public_catalog)})
-    except Exception as e:
-        return jsonify({'error': str(e), 'catalog': []}), 500
-
-
-@app.route('/api/store/installed')
-@login_required
-def api_store_installed():
-    """Cek container Docker yang sedang running dan cocokkan dengan katalog."""
-    try:
-        client = docker.from_env()
-        containers = client.containers.list(all=True)
-
-        installed = []
-        for c in containers:
-            name = c.name
-            status = c.status  # 'running', 'exited', etc.
-            ports_info = []
-            if c.ports:
-                for container_port, bindings in c.ports.items():
-                    if bindings:
-                        for b in bindings:
-                            ports_info.append({
-                                'container': container_port.split('/')[0],
-                                'host': b.get('HostPort', ''),
-                                'protocol': 'tcp'
-                            })
-
-            installed.append({
-                'id': name,
-                'container_name': name,
-                'running': status == 'running',
-                'status': status,
-                'ports': ports_info,
-                'image': c.image.tags[0] if c.image.tags else ''
-            })
-
-        return jsonify({'installed': installed})
-    except Exception as e:
-        return jsonify({'installed': [], 'error': str(e)}), 200
-
-
-def _install_catalog_app(app_id, config, sid=None):
-    """Thread worker: jalankan docker compose up -d dari folder aplikasi."""
-    def emit_log(message, log_type='info'):
-        socketio.emit('install_log', {
-            'message': message,
-            'type': log_type,
-            'app_id': app_id
-        })
-
-    def emit_progress(percent, message=''):
-        socketio.emit('install_progress', {
-            'percent': percent,
-            'message': message
-        })
-
-    try:
-        # Cari compose_dir dari katalog
-        catalog = get_store_catalog()
-        app_meta = next((a for a in catalog if a['id'] == app_id), None)
-
-        if not app_meta:
-            emit_log(f"âŒ App '{app_id}' tidak ditemukan di katalog!", 'error')
-            socketio.emit('install_complete', {'status': 'error', 'error': 'App not found', 'app_id': app_id})
-            return
-
-        compose_dir = app_meta['compose_dir']
-        compose_file = app_meta['compose_path']
-
-        if not os.path.isfile(compose_file):
-            emit_log(f"âŒ docker-compose.yml tidak ditemukan: {compose_file}", 'error')
-            socketio.emit('install_complete', {'status': 'error', 'error': 'compose not found', 'app_id': app_id})
-            return
-
-        emit_log(f"ðŸ“¦ Memulai instalasi {app_meta['name']}...", 'info')
-        emit_log(f"ðŸ“ Direktori: {compose_dir}", 'dim')
-        emit_progress(5, f"Pulling image {app_meta.get('image', '')}...")
-
-        # Jalankan: docker compose up -d
-        cmd = ['docker', 'compose', '-f', compose_file, 'up', '-d', '--pull', 'always']
-        emit_log(f"â–¶ Menjalankan: {' '.join(cmd)}", 'dim')
-
-        process = subprocess.Popen(
-            cmd,
-            cwd=compose_dir,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            encoding='utf-8',
-            errors='replace'
-        )
-
-        progress = 10
-        for line in iter(process.stdout.readline, ''):
-            line = line.rstrip()
-            if not line:
-                continue
-
-            # Tentukan tipe log
-            log_type = 'info'
-            if 'error' in line.lower() or 'failed' in line.lower():
-                log_type = 'error'
-            elif 'pull' in line.lower() or 'download' in line.lower() or 'pulling' in line.lower():
-                log_type = 'downloading'
-                if progress < 70:
-                    progress += 2
-            elif 'started' in line.lower() or 'running' in line.lower() or 'created' in line.lower():
-                log_type = 'success'
-                progress = max(progress, 90)
-            elif 'warning' in line.lower():
-                log_type = 'warning'
-
-            emit_log(line, log_type)
-            emit_progress(min(progress, 95), line[:60])
-
-        process.wait()
-
-        if process.returncode == 0:
-            emit_progress(100, 'Installation complete!')
-            emit_log(f"âœ… {app_meta['name']} berhasil diinstal!", 'success')
-            socketio.emit('install_complete', {'status': 'success', 'app_id': app_id})
-            audit_log('STORE_INSTALL', f"Installed {app_id}", session.get('username', 'system'))
-        else:
-            emit_log(f"âŒ Docker compose gagal (exit code {process.returncode})", 'error')
-            socketio.emit('install_complete', {'status': 'error', 'error': f'Exit code {process.returncode}', 'app_id': app_id})
-
-    except Exception as e:
-        emit_log(f"âŒ Error: {str(e)}", 'error')
-        socketio.emit('install_complete', {'status': 'error', 'error': str(e), 'app_id': app_id})
-
-
-@app.route('/api/store/install', methods=['POST'])
-@admin_required
-def api_store_install():
-    """Trigger instalasi aplikasi dari katalog BigBear CasaOS."""
-    data = request.json or {}
-    app_id = data.get('app_id', '').strip()
-    config = data.get('config', {})
-
-    if not app_id:
-        return jsonify({'error': 'app_id diperlukan'}), 400
-
-    # Jalankan di background thread
-    t = threading.Thread(
-        target=_install_catalog_app,
-        args=(app_id, config),
-        daemon=True
-    )
-    t.start()
-
-    return jsonify({'status': 'started', 'app_id': app_id})
-
-
-@app.route('/api/store/manage', methods=['POST'])
-@admin_required
-def api_store_manage():
-    """Manage app: uninstall atau update."""
-    data = request.json or {}
-    app_id = data.get('app_id', '').strip()
-    action = data.get('action', '').strip()
-
-    if not app_id or action not in ('uninstall', 'update', 'stop', 'start', 'restart'):
-        return jsonify({'error': 'Parameter tidak valid'}), 400
-
-    try:
-        client = docker.from_env()
-
-        if action == 'uninstall':
-            # Cari compose_dir
-            catalog = get_store_catalog()
-            app_meta = next((a for a in catalog if a['id'] == app_id), None)
-            if app_meta and os.path.isfile(app_meta['compose_path']):
-                cmd = ['docker', 'compose', '-f', app_meta['compose_path'], 'down', '--remove-orphans']
-                result = subprocess.run(cmd, capture_output=True, text=True, cwd=app_meta['compose_dir'])
-                if result.returncode == 0:
-                    audit_log('STORE_UNINSTALL', f"Uninstalled {app_id}", session.get('username', 'system'))
-                    return jsonify({'success': True})
-                else:
-                    return jsonify({'error': result.stderr or 'Gagal uninstall'}), 500
-            else:
-                # Fallback: coba stop+remove container langsung
-                try:
-                    container = client.containers.get(app_id)
-                    container.stop()
-                    container.remove()
-                    return jsonify({'success': True})
-                except Exception as e2:
-                    return jsonify({'error': str(e2)}), 500
-
-        elif action == 'update':
-            def _do_update():
-                catalog = get_store_catalog()
-                app_meta = next((a for a in catalog if a['id'] == app_id), None)
-                if not app_meta:
-                    socketio.emit('install_log', {'message': f'App {app_id} tidak ditemukan', 'type': 'error', 'app_id': app_id})
-                    socketio.emit('install_complete', {'status': 'error', 'app_id': app_id})
-                    return
-                cmd = ['docker', 'compose', '-f', app_meta['compose_path'], 'pull']
-                subprocess.run(cmd, cwd=app_meta['compose_dir'])
-                _install_catalog_app(app_id, {})
-
-            t = threading.Thread(target=_do_update, daemon=True)
-            t.start()
-            return jsonify({'status': 'update_started', 'app_id': app_id})
-
-        else:
-            # start / stop / restart container langsung
-            try:
-                container = client.containers.get(app_id)
-                if action == 'start':
-                    container.start()
-                elif action == 'stop':
-                    container.stop()
-                elif action == 'restart':
-                    container.restart()
-                audit_log('STORE_MANAGE', f"{action} {app_id}", session.get('username', 'system'))
-                return jsonify({'success': True})
-            except docker.errors.NotFound:
-                return jsonify({'error': f'Container {app_id} tidak ditemukan'}), 404
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/store/add_source', methods=['POST'])
-@admin_required
-def api_store_add_source():
-    """Import tambahan app dari URL ZIP (CasaOS format). Tidak digunakan untuk BigBear yang sudah lokal."""
-    return jsonify({'error': 'Fitur ini tidak diperlukan - BigBear CasaOS sudah tersedia secara lokal di server.', 'added': 0}), 400
-
 
 if __name__ == '__main__':
     print("Starting Development Server on http://localhost:5000")

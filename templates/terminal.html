@@ -210,10 +210,10 @@
         /* Mac-like Terminal Area */
         .terminal-container {
             flex: 1;
-            background: #0d1117;
+            background: #0f111a;
             border-radius: 16px;
-            border: 1px solid rgba(88,166,255,0.15);
-            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
             overflow: hidden;
             display: flex;
             flex-direction: column;
@@ -256,7 +256,7 @@
             padding: 10px 15px;
             box-sizing: border-box;
             display: none;
-            background: #0d1117;
+            background: #15151e;
             overflow: hidden;
         }
 
@@ -586,31 +586,30 @@ Restart App=systemctl restart myapp"></textarea>
                 fontSize: currentFontSize,
                 fontFamily: 'Consolas, Monaco, "Courier New", monospace',
                 theme: {
-                    background: '#0d1117',
-                    foreground: '#e6edf3',          // putih terang - teks utama jelas
-                    cursor: '#58a6ff',
-                    cursorAccent: '#0d1117',
-                    selectionBackground: 'rgba(88,166,255,0.3)',
-                    // ANSI colors - kontras tinggi
-                    black:          '#21262d',       // bukan gelap banget biar ga invisible
-                    red:            '#ff7b72',
-                    green:          '#3fb950',
-                    yellow:         '#d29922',
-                    blue:           '#58a6ff',
-                    magenta:        '#bc8cff',
-                    cyan:           '#39c5cf',
-                    white:          '#b1bac4',
-                    brightBlack:    '#6e7681',       // abu-abu terang untuk dim text
-                    brightRed:      '#ffa198',
-                    brightGreen:    '#56d364',
-                    brightYellow:   '#e3b341',
-                    brightBlue:     '#79c0ff',
-                    brightMagenta:  '#d2a8ff',
-                    brightCyan:     '#56d4dd',
-                    brightWhite:    '#ffffff'
+                    background: '#15151e',
+                    foreground: '#d0d0d0',
+                    cursor: '#55efc4',
+                    cursorAccent: '#15151e',
+                    selection: 'rgba(85,239,196,0.3)',
+                    // Custom colors for better visibility
+                    black: '#1e1e28',
+                    red: '#ff7675',
+                    green: '#55efc4',
+                    yellow: '#ffeaa7',
+                    blue: '#74b9ff',
+                    magenta: '#a29bfe',
+                    cyan: '#81ecec',
+                    white: '#dfe6e9',
+                    brightBlack: '#636e72',
+                    brightRed: '#ff7675',
+                    brightGreen: '#55efc4',
+                    brightYellow: '#ffeaa7',
+                    brightBlue: '#74b9ff',
+                    brightMagenta: '#a29bfe',
+                    brightCyan: '#81ecec',
+                    brightWhite: '#ffffff'
                 }
             });
-
 
             const fitAddon = new FitAddon.FitAddon();
             term.loadAddon(fitAddon);
