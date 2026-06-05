@@ -7,6 +7,7 @@ let isLoading = false;
 let viewMode = 'drives'; // 'files' or 'drives'
 let currentSortBy = 'name';
 let currentSortOrder = 'asc';
+let displayFormat = 'list'; // 'list' or 'grid'
 
 // Quick folder list for sidebar
 const quickFolders = [];
@@ -210,6 +211,8 @@ function loadFiles(path, page = 1) {
     viewMode = 'files';
     if (page === 1) {
         document.getElementById('file-list').innerHTML = '';
+        const fg = document.getElementById('file-grid');
+        if (fg) fg.innerHTML = '';
         document.getElementById('status-text').textContent = 'Loading...';
         currentPage = 1;
         selectedItem = null;
@@ -321,13 +324,16 @@ function formatSize(bytes) {
 
 function renderTable(items, isNew) {
     const tbody = document.getElementById('file-list');
+    const grid = document.getElementById('file-grid');
 
     if (isNew && items.length === 0) {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:2rem; color:var(--text-muted)">Empty folder</td></tr>';
+        if (grid) grid.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--text-muted); grid-column:1/-1;">Empty folder</div>';
         return;
     }
 
     items.forEach(item => {
+        // Table row
         const tr = document.createElement('tr');
         tr.onclick = (e) => selectRow(tr, item, e);
         tr.ondblclick = () => openItem(item);
@@ -359,16 +365,64 @@ function renderTable(items, isNew) {
             <td style="color:var(--text-muted)">${item.date}</td>
         `;
         tbody.appendChild(tr);
+
+        // Grid item
+        if (grid) {
+            const div = document.createElement('div');
+            div.className = 'grid-item';
+            div.onclick = (e) => selectGridItem(div, item, e);
+            div.ondblclick = () => openItem(item);
+            div.oncontextmenu = (e) => showContextMenu(e, item, div);
+            
+            div.innerHTML = `
+                <div class="icon"><i class="fa-solid ${iconClass.split(' ')[0]}" style="color: ${iconColor}"></i></div>
+                <div class="name" title="${item.name}">${item.name}</div>
+            `;
+            grid.appendChild(div);
+        }
     });
 }
 
 function selectRow(tr, item, e) {
-    document.querySelectorAll('.fm-table tr').forEach(r => r.classList.remove('selected'));
+    document.querySelectorAll('.fm-table tr, .grid-item').forEach(r => r.classList.remove('selected'));
     tr.classList.add('selected');
+    const index = Array.from(tr.parentNode.children).indexOf(tr);
+    const grid = document.getElementById('file-grid');
+    if (grid && grid.children[index]) {
+        grid.children[index].classList.add('selected');
+    }
     selectedItem = item;
-
-    // Don't trigger when right-clicking
     if (e && e.button === 2) return;
+}
+
+function selectGridItem(div, item, e) {
+    document.querySelectorAll('.fm-table tr, .grid-item').forEach(r => r.classList.remove('selected'));
+    div.classList.add('selected');
+    const index = Array.from(div.parentNode.children).indexOf(div);
+    const tbody = document.getElementById('file-list');
+    if (tbody && tbody.children[index]) {
+        tbody.children[index].classList.add('selected');
+    }
+    selectedItem = item;
+    if (e && e.button === 2) return;
+}
+
+function setDisplayFormat(mode) {
+    displayFormat = mode;
+    const btnList = document.getElementById('btn-view-list');
+    const btnGrid = document.getElementById('btn-view-grid');
+    if (btnList) btnList.classList.toggle('active', mode === 'list');
+    if (btnGrid) btnGrid.classList.toggle('active', mode === 'grid');
+    
+    const table = document.getElementById('fm-table-view');
+    const grid = document.getElementById('file-grid');
+    if (mode === 'grid') {
+        if (table) table.style.display = 'none';
+        if (grid) grid.style.display = 'grid';
+    } else {
+        if (table) table.style.display = 'table';
+        if (grid) grid.style.display = 'none';
+    }
 }
 
 function updateDetailPanel() {

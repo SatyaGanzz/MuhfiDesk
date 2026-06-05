@@ -422,6 +422,33 @@
             background: var(--glass-bg) !important;
             border-color: var(--glass-border) !important;
         }
+
+        /* Grid View Layout */
+        #file-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 1rem;
+            padding: 1rem;
+            align-content: start;
+        }
+        .grid-item {
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+            padding: 1rem 0.5rem; border-radius: 8px; cursor: pointer; text-align: center;
+            border: 1px solid transparent; transition: background 0.2s, border 0.2s;
+        }
+        .grid-item:hover {
+            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .grid-item.selected {
+            background: rgba(100, 150, 255, 0.15); border: 1px solid rgba(100, 150, 255, 0.3);
+        }
+        .grid-item .icon {
+            font-size: 3rem; margin-bottom: 0.8rem;
+        }
+        .grid-item .name {
+            font-size: 0.85rem; word-break: break-word; display: -webkit-box;
+            -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--text-main);
+        }
     </style>
     <script src="{{ url_for('static', filename='theme.js') }}"></script>
 </head>
@@ -463,15 +490,17 @@
                             onkeyup="filterFiles(this.value)">
                         <button class="fm-btn" onclick="clearSearch()"><i class="fa-solid fa-xmark"></i></button>
                     </div>
-                    <button class="fm-btn" onclick="createNew('folder')"><i
-                            class="fa-solid fa-folder-plus"></i></button>
+                    <button class="fm-btn" onclick="createNew('folder')"><i class="fa-solid fa-folder-plus"></i></button>
                     <button class="fm-btn" onclick="createNew('file')"><i class="fa-solid fa-file-circle-plus"></i></button>
-                    <button class="fm-btn" onclick="loadFiles(currentPath)"><i
-                            class="fa-solid fa-rotate-right"></i></button>
-                    <input type="file" id="upload-input" multiple style="display:none"
-                        onchange="uploadFiles(this.files)">
-                    <button class="fm-btn" onclick="document.getElementById('upload-input').click()"
-                        style="background:#238636">
+                    <button class="fm-btn" onclick="loadFiles(currentPath)"><i class="fa-solid fa-rotate-right"></i></button>
+                    
+                    <div style="border-left: 1px solid var(--glass-border); margin: 0 0.2rem; height: 24px;"></div>
+                    <button class="fm-btn active" id="btn-view-list" onclick="setDisplayFormat('list')" title="List View"><i class="fa-solid fa-list"></i></button>
+                    <button class="fm-btn" id="btn-view-grid" onclick="setDisplayFormat('grid')" title="Grid View"><i class="fa-solid fa-border-all"></i></button>
+                    <div style="border-left: 1px solid var(--glass-border); margin: 0 0.2rem; height: 24px;"></div>
+
+                    <input type="file" id="upload-input" multiple style="display:none" onchange="uploadFiles(this.files)">
+                    <button class="fm-btn" onclick="document.getElementById('upload-input').click()" style="background:#238636">
                         <i class="fa-solid fa-upload"></i> Upload
                     </button>
                     <button class="fm-btn" onclick="downloadSelected()"><i class="fa-solid fa-download"></i></button>
@@ -480,7 +509,7 @@
 
                 <!-- File Table -->
                 <div class="fm-table-wrap">
-                    <table class="fm-table">
+                    <table class="fm-table" id="fm-table-view">
                         <thead>
                             <tr>
                                 <th style="width:45%; cursor:pointer" onclick="toggleSort('name')">Name <i id="sort-icon-name" class="fa-solid fa-sort"></i></th>
@@ -491,6 +520,7 @@
                         </thead>
                         <tbody id="file-list"></tbody>
                     </table>
+                    <div id="file-grid" style="display:none;"></div>
                 </div>
 
                 <!-- Status Bar -->
