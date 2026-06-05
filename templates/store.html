@@ -911,20 +911,43 @@
 
         function loadApps() {
             const grid = document.getElementById('apps-grid');
-            grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:3rem; color:#8b949e"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>';
+            grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:3rem; color:#8b949e">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size:2rem"></i>
+                <div style="margin-top:1rem">Memuat katalog aplikasi...</div>
+            </div>`;
 
             fetch('/api/store/catalog')
-                .then(r => r.json())
+                .then(r => {
+                    if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+                    return r.json();
+                })
                 .then(data => {
+                    if (data.error) throw new Error(data.error);
                     allApps = data.catalog || [];
+                    if (allApps.length === 0) {
+                        grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:3rem; color:#8b949e">
+                            <i class="fa-solid fa-box-open fa-2x"></i>
+                            <div style="margin-top:1rem">Katalog kosong. Pastikan folder <code>store_apps/</code> ada di server.</div>
+                            <button class="btn" onclick="loadApps()" style="margin-top:1rem"><i class="fa-solid fa-rotate-right"></i> Retry</button>
+                        </div>`;
+                        return;
+                    }
                     renderCategories();
                     applyFilters();
                 })
                 .catch(err => {
-                    grid.innerHTML = 'Error loading catalog';
-                    showToast('Gagal memuat katalog', 'error');
+                    console.error('Catalog error:', err);
+                    grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:3rem; color:#f85149">
+                        <i class="fa-solid fa-circle-exclamation fa-2x"></i>
+                        <div style="margin-top:1rem; font-weight:600">Gagal memuat katalog</div>
+                        <div style="margin-top:0.5rem; font-size:0.85rem; color:#8b949e; font-family:monospace">${err.message}</div>
+                        <div style="margin-top:0.5rem; font-size:0.8rem; color:#6e7681">Jalankan: <code>git pull</code> di server lalu restart app</div>
+                        <button class="btn" onclick="loadApps()" style="margin-top:1rem"><i class="fa-solid fa-rotate-right"></i> Retry</button>
+                    </div>`;
+                    showToast('Gagal memuat katalog: ' + err.message, 'error');
                 });
         }
+
 
         function renderCategories() {
             const categories = ['All', ...new Set(allApps.map(a => a.category))];
