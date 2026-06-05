@@ -355,42 +355,57 @@ body.theme-glassmorphic .detail-card {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 2rem;
+    justify-content: flex-start;
+    padding: 1rem;
     cursor: pointer;
-    gap: 1rem;
+    gap: 0.8rem;
     position: relative; /* For the options menu */
+    border-radius: 24px;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.app-item:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.app-item:hover .app-icon {
+    transform: scale(1.08) translateY(-4px);
+    box-shadow: 0 16px 32px rgba(0,0,0,0.4), inset 0 2px 2px rgba(255,255,255,0.3);
 }
 
 /* App Options Menu */
 .app-options {
     position: absolute;
-    top: 10px;
-    right: 10px;
+    top: 5px;
+    right: 5px;
     color: rgba(255,255,255,0.5);
-    padding: 5px;
-    border-radius: 5px;
+    padding: 6px;
+    border-radius: 50%;
     transition: all 0.2s ease;
     z-index: 10;
+    opacity: 0;
+}
+.app-item:hover .app-options {
+    opacity: 1;
 }
 .app-options:hover {
     color: white;
-    background: rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.15);
 }
 
 .app-options-menu {
     position: absolute;
     top: 35px;
     right: 10px;
-    background: #1e293b; /* Solid dark background */
+    background: rgba(30, 41, 59, 0.95); /* Solid dark background */
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
     border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 8px;
-    padding: 5px;
-    min-width: 130px;
+    border-radius: 12px;
+    padding: 6px;
+    min-width: 140px;
     z-index: 20;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.6);
     color: #f1f5f9; /* Light text for readability */
 }
 
@@ -398,7 +413,7 @@ body.theme-glassmorphic .detail-card {
     padding: 10px 14px;
     font-size: 0.9rem;
     font-weight: 500;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
@@ -419,36 +434,35 @@ body.theme-glassmorphic .detail-card {
 }
 
 .app-icon {
-    width: 64px;
-    height: 64px;
-    border-radius: 18px;
+    width: 76px;
+    height: 76px;
+    border-radius: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2rem;
+    font-size: 2.2rem;
     color: white;
     position: relative;
     overflow: hidden;
-    border: 1px solid rgba(255,255,255,0.2);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-    background: var(--glass-highlight);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.15);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.2);
+    background: linear-gradient(135deg, var(--app-color) 0%, rgba(0,0,0,0.2) 100%);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
 }
 
 .app-icon::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: var(--app-color);
-    opacity: 0.5;
+    background: linear-gradient(to bottom right, rgba(255,255,255,0.25), transparent 50%);
     z-index: 0;
+    pointer-events: none;
 }
 
 .app-icon i, .app-icon img {
     position: relative;
     z-index: 1;
-    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4));
 }
 
 /* Docker apps full shape styling */
