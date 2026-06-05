@@ -425,8 +425,10 @@
 
         /* Grid View Layout */
         #file-grid {
+            --grid-size: 110px;
+            --icon-size: 3rem;
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(var(--grid-size), 1fr));
             gap: 1rem;
             padding: 1rem;
             align-content: start;
@@ -443,7 +445,8 @@
             background: rgba(100, 150, 255, 0.15); border: 1px solid rgba(100, 150, 255, 0.3);
         }
         .grid-item .icon {
-            font-size: 3rem; margin-bottom: 0.8rem;
+            font-size: var(--icon-size); margin-bottom: 0.8rem;
+            transition: font-size 0.2s ease;
         }
         .grid-item .name {
             font-size: 0.85rem; word-break: break-word; display: -webkit-box;
@@ -451,6 +454,28 @@
         }
     </style>
     <script src="{{ url_for('static', filename='theme.js') }}"></script>
+    <script>
+        function updateGridZoom(value) {
+            const grid = document.getElementById('file-grid');
+            if (grid) {
+                grid.style.setProperty('--grid-size', value + 'px');
+                const iconSize = (value / 110) * 3;
+                grid.style.setProperty('--icon-size', iconSize + 'rem');
+                localStorage.setItem('fm_grid_zoom', value);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedZoom = localStorage.getItem('fm_grid_zoom');
+            if (savedZoom) {
+                const slider = document.getElementById('grid-zoom');
+                if (slider) {
+                    slider.value = savedZoom;
+                    updateGridZoom(savedZoom);
+                }
+            }
+        });
+    </script>
 </head>
 
 <body>
@@ -495,6 +520,13 @@
                     <button class="fm-btn" onclick="loadFiles(currentPath)"><i class="fa-solid fa-rotate-right"></i></button>
                     
                     <div style="border-left: 1px solid var(--glass-border); margin: 0 0.2rem; height: 24px;"></div>
+                    
+                    <div id="grid-zoom-container" style="display:none; align-items:center; gap:0.5rem; margin:0 0.5rem;">
+                        <i class="fa-solid fa-magnifying-glass-minus" style="font-size:0.8rem; color:var(--text-muted)"></i>
+                        <input type="range" id="grid-zoom" min="80" max="250" value="110" style="width:70px; cursor:pointer;" oninput="updateGridZoom(this.value)">
+                        <i class="fa-solid fa-magnifying-glass-plus" style="font-size:0.8rem; color:var(--text-muted)"></i>
+                    </div>
+
                     <button class="fm-btn active" id="btn-view-list" onclick="setDisplayFormat('list')" title="List View"><i class="fa-solid fa-list"></i></button>
                     <button class="fm-btn" id="btn-view-grid" onclick="setDisplayFormat('grid')" title="Grid View"><i class="fa-solid fa-border-all"></i></button>
                     <div style="border-left: 1px solid var(--glass-border); margin: 0 0.2rem; height: 24px;"></div>

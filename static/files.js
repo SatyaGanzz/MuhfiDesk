@@ -430,12 +430,16 @@ function setDisplayFormat(mode) {
     
     const table = document.getElementById('fm-table-view');
     const grid = document.getElementById('file-grid');
+    const zoomContainer = document.getElementById('grid-zoom-container');
+
     if (mode === 'grid') {
         if (table) table.style.display = 'none';
         if (grid) grid.style.display = 'grid';
+        if (zoomContainer) zoomContainer.style.display = 'flex';
     } else {
         if (table) table.style.display = 'table';
         if (grid) grid.style.display = 'none';
+        if (zoomContainer) zoomContainer.style.display = 'none';
     }
 }
 
