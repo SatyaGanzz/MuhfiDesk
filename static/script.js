@@ -999,10 +999,11 @@ function showToast(message, type = 'success') {
     const toast = document.createElement('div');
     toast.id = 'custom-toast';
     toast.style.cssText = `
-        position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px);
-        background: var(--bg-elevated, #1c2128); color: var(--text-main, #e6edf3);
+        position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px);
+        background: rgba(15, 23, 42, 0.75); color: #ffffff;
+        backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
         padding: 12px 24px; border-radius: 50px;
-        border: 1px solid var(--glass-border, rgba(255,255,255,0.1));
+        border: 1px solid rgba(255, 255, 255, 0.15);
         box-shadow: 0 10px 40px rgba(0,0,0,0.5); z-index: 99999;
         font-family: inherit; font-size: 0.95rem; font-weight: 500;
         opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -1021,7 +1022,7 @@ function showToast(message, type = 'success') {
     }, 10);
 
     setTimeout(() => {
-        toast.style.transform = 'translateX(-50%) translateY(100px)';
+        toast.style.transform = 'translateX(-50%) translateY(-100px)';
         toast.style.opacity = '0';
         setTimeout(() => toast.remove(), 400);
     }, 1500);
