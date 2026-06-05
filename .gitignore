@@ -17,6 +17,7 @@ data/*
 *.db
 *.log
 *.zip
+docker_data/
 
 # Installers and Scripts (if you want to ignore any)
 create_package.py

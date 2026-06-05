@@ -914,20 +914,20 @@ function ensureDockerPortModal() {
                 </button>
             </div>
             <input type="hidden" id="docker-port-app-id">
-            <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:0.35rem;">Network</label>
-            <select id="docker-port-network" onchange="handleDashboardDockerNetworkChange()" style="width:100%; margin-bottom:1rem; padding:0.7rem; border-radius:8px; border:1px solid rgba(255,255,255,0.16); background:rgba(15,23,42,0.92); color:#fff;">
+            <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:0.4rem; font-weight:500;">Network</label>
+            <select id="docker-port-network" onchange="handleDashboardDockerNetworkChange()" style="width:100%; margin-bottom:1.25rem; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid var(--glass-border); background:var(--bg-elevated); color:var(--text-main); font-family:inherit; outline:none;">
                 <option value="bridge">Bridge</option>
                 <option value="host">Host</option>
             </select>
             <div id="docker-port-section">
                 <div id="docker-port-rows"></div>
-                <button class="btn secondary" type="button" onclick="addDashboardDockerPortRow()" style="margin-top:0.4rem;">
+                <button class="file-btn" type="button" onclick="addDashboardDockerPortRow()" style="margin-top:0.6rem; font-size:0.85rem; padding:0.4rem 0.8rem;">
                     <i class="fa-solid fa-plus"></i> Add Port
                 </button>
             </div>
-            <div style="display:flex; justify-content:flex-end; gap:0.75rem; margin-top:1.25rem;">
-                <button class="btn secondary" type="button" onclick="closeDockerPortModal()">Cancel</button>
-                <button class="btn success" type="button" id="docker-port-save-btn" onclick="saveDashboardDockerPorts()">Save & Restart</button>
+            <div style="display:flex; justify-content:flex-end; gap:0.75rem; margin-top:1.5rem;">
+                <button class="file-btn" type="button" onclick="closeDockerPortModal()">Cancel</button>
+                <button class="file-btn" type="button" id="docker-port-save-btn" onclick="saveDashboardDockerPorts()" style="background:#238636; color:#fff; border-color:rgba(255,255,255,0.1);">Save & Restart</button>
             </div>
         </div>
     `;
@@ -954,13 +954,13 @@ function addDashboardDockerPortRow(container = '', host = '', protocol = 'tcp') 
     row.className = 'dashboard-docker-port-row';
     row.style.cssText = 'display:grid; grid-template-columns:1fr 1fr 92px 38px; gap:0.5rem; align-items:center; margin-bottom:0.6rem;';
     row.innerHTML = `
-        <input class="docker-port-container" type="number" placeholder="Container" value="${container}" style="min-width:0; padding:0.65rem; border-radius:8px; border:1px solid rgba(255,255,255,0.14); background:rgba(15,23,42,0.92); color:#fff;">
-        <input class="docker-port-host" type="number" placeholder="Host" value="${host}" style="min-width:0; padding:0.65rem; border-radius:8px; border:1px solid rgba(255,255,255,0.14); background:rgba(15,23,42,0.92); color:#fff;">
-        <select class="docker-port-protocol" style="padding:0.65rem; border-radius:8px; border:1px solid rgba(255,255,255,0.14); background:rgba(15,23,42,0.92); color:#fff;">
+        <input class="docker-port-container" type="number" placeholder="Container" value="${container}" style="min-width:0; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid var(--glass-border); background:var(--bg-elevated); color:var(--text-main); font-family:inherit; outline:none;">
+        <input class="docker-port-host" type="number" placeholder="Host" value="${host}" style="min-width:0; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid var(--glass-border); background:var(--bg-elevated); color:var(--text-main); font-family:inherit; outline:none;">
+        <select class="docker-port-protocol" style="padding:0.6rem 0.8rem; border-radius:8px; border:1px solid var(--glass-border); background:var(--bg-elevated); color:var(--text-main); font-family:inherit; outline:none;">
             <option value="tcp" ${protocol === 'tcp' ? 'selected' : ''}>TCP</option>
             <option value="udp" ${protocol === 'udp' ? 'selected' : ''}>UDP</option>
         </select>
-        <button class="btn danger" type="button" onclick="this.closest('.dashboard-docker-port-row').remove()" title="Remove" style="height:38px; padding:0;">
+        <button class="file-btn danger" type="button" onclick="this.closest('.dashboard-docker-port-row').remove()" title="Remove" style="height:38px; width:38px; padding:0; justify-content:center;">
             <i class="fa-solid fa-minus"></i>
         </button>
     `;
