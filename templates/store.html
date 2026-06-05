@@ -783,13 +783,14 @@
         let logItems = [];
         
         // Initialize Socket.IO for real-time installation logs
-        const socket = io();
+        const installSocket = window.storeSocket || io();
+        window.storeSocket = installSocket;
 
-        socket.on('install_log', function (data) {
+        installSocket.on('install_log', function (data) {
             addLog(data.message, data.type, data.app_id);
         });
 
-        socket.on('install_complete', function (data) {
+        installSocket.on('install_complete', function (data) {
             if (data.status === 'success') {
                 showToast(`${data.app_id} installed successfully!`, 'success');
                 setTimeout(() => {
@@ -1469,13 +1470,14 @@ services:
 
         function confirmInstall() {
             if (!currentApp) return;
-            const appId = currentApp.id;
 
-            // Payload
-            let payload = { app_id: appId };
+            const appId = currentApp.id;
+            const appName = currentApp.name || currentApp.id || 'Custom App';
+            const payload = { app_id: appId };
 
             if (appId === 'custom') {
-                const isComposeTab = document.getElementById('compose-tab-content').style.display === 'block';
+                const composeTab = document.getElementById('compose-tab-content');
+                const isComposeTab = composeTab && composeTab.style.display === 'block';
 
                 if (isComposeTab) {
                     const stackName = document.getElementById('compose-app-name').value.trim();
@@ -1489,49 +1491,42 @@ services:
                         raw_compose: rawCompose
                     };
                 } else {
-                    // Harvest Custom Data
-                    const name = document.getElementById('custom-app-name').value;
-                    const image = document.getElementById('custom-app-image').value;
+                    const name = document.getElementById('custom-app-name').value.trim();
+                    const image = document.getElementById('custom-app-image').value.trim();
                     const net = document.getElementById('custom-net-mode').value;
-                    const cpuLimit = document.getElementById('custom-cpu-limit').value;
-                    const memLimit = document.getElementById('custom-mem-limit').value;
+                    const cpuLimit = document.getElementById('custom-cpu-limit').value.trim();
+                    const memLimit = document.getElementById('custom-mem-limit').value.trim();
 
                     if (!name || !image) {
                         alert("Name and Image are required");
                         return;
                     }
 
-                    // Harvest Ports
-                    const ports = Array.from(document.querySelectorAll('.custom-row-item')).map(row => {
-                        const h = row.querySelector('.custom-port-host');
-                        const c = row.querySelector('.custom-port-container');
-                        if (h && c && h.value && c.value) return { host: h.value, container: c.value, protocol: 'tcp' };
-                        return null;
+                    const ports = Array.from(document.querySelectorAll('#custom-ports-container .custom-row-item')).map(row => {
+                        const host = row.querySelector('.custom-port-host')?.value.trim();
+                        const container = row.querySelector('.custom-port-container')?.value.trim();
+                        return host && container ? { host, container, protocol: 'tcp' } : null;
                     }).filter(Boolean);
 
-                    // Harvest Vols
-                    const vols = Array.from(document.querySelectorAll('.custom-row-item')).map(row => {
-                        const h = row.querySelector('.custom-vol-host');
-                        const c = row.querySelector('.custom-vol-container');
-                        if (h && c && h.value && c.value) return { bind: h.value, container: c.value };
-                        return null;
+                    const volumes = Array.from(document.querySelectorAll('#custom-vols-container .custom-row-item')).map(row => {
+                        const bind = row.querySelector('.custom-vol-host')?.value.trim();
+                        const container = row.querySelector('.custom-vol-container')?.value.trim();
+                        return bind && container ? { bind, container } : null;
                     }).filter(Boolean);
 
-                // Harvest Envs
-                const envs = Array.from(document.querySelectorAll('.custom-row-item')).map(row => {
-                    const k = row.querySelector('.custom-env-key');
-                    const v = row.querySelector('.custom-env-val');
-                    if (k && v && k.value && v.value) return { key: k.value, value: v.value };
-                    return null;
-                }).filter(Boolean);
+                    const env = Array.from(document.querySelectorAll('#custom-env-container .custom-row-item')).map(row => {
+                        const key = row.querySelector('.custom-env-key')?.value.trim();
+                        const value = row.querySelector('.custom-env-val')?.value.trim();
+                        return key && value ? { key, value } : null;
+                    }).filter(Boolean);
 
-                payload.config = { name, image, network_mode: net, ports, volumes: vols, env: envs, cpu_limit: cpuLimit, mem_limit: memLimit };
+                    payload.config = { name, image, network_mode: net, ports, volumes, env, cpu_limit: cpuLimit, mem_limit: memLimit };
+                }
             } else {
-                // Harvest Standard
                 const customPorts = (currentApp.ports || []).map((p, i) => ({
                     host: document.getElementById(`port-host-${i}`).value,
                     container: document.getElementById(`port-container-${i}`).value,
-                    protocol: document.getElementById(`port-proto-${i}`).value
+                    protocol: document.getElementById(`port-proto-${i}`).value || p.protocol || 'tcp'
                 }));
 
                 const customVols = (currentApp.volumes || []).map((v, i) => ({
@@ -1547,18 +1542,10 @@ services:
                 payload.config = { ports: customPorts, volumes: customVols, env: customEnv };
             }
 
-            // Close Config Modal
             closeModal();
-
-            // Add log and show panel
-            const appName = currentApp.name || 'Custom App';
-            
-            // Show new Log Modal
             resetLogModal();
             document.getElementById('log-modal-title').innerHTML = `Installing <strong>${appName}</strong>`;
             appendLog('Starting installation...', 'info');
-            
-            // Show modal & hide widget
             document.getElementById('log-modal').style.display = 'flex';
             isMinimized = false;
             document.getElementById('minimized-install-widget').style.display = 'none';
@@ -1772,23 +1759,23 @@ services:
     </div>
 
     <!-- Socket.IO Client -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script>
-        const socket = io();
+        const modalSocket = window.storeSocket || io();
+        window.storeSocket = modalSocket;
         let isMinimized = false;
 
-        socket.on('connect', () => console.log("Socket connected"));
+        modalSocket.on('connect', () => console.log("Socket connected"));
 
-        socket.on('install_log', (data) => {
+        modalSocket.on('install_log', (data) => {
             appendLog(data.message, data.type);
         });
 
-        socket.on('install_progress', (data) => {
+        modalSocket.on('install_progress', (data) => {
             const percent = Math.round(data.percent);
             updateProgress(percent, data.message);
         });
 
-        socket.on('install_complete', (data) => {
+        modalSocket.on('install_complete', (data) => {
             const footer = document.getElementById('log-footer');
             const btnOpen = document.getElementById('btn-open-app');
             footer.style.display = 'flex';

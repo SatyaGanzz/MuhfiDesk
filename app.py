@@ -4304,7 +4304,8 @@ PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -t nat -D POSTROUTING -
 # ============ APP STORE ============
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, 'data')
-CATALOG_FILE = os.path.join(BASE_DIR, 'store_apps', 'catalog.json')
+STORE_APPS_DIR = os.path.join(BASE_DIR, 'store_apps')
+CATALOG_FILE = os.path.join(STORE_APPS_DIR, 'catalog.json')
 USER_CATALOG_FILE = os.path.join(DATA_DIR, 'user_apps.json')
 CASAOS_CATALOG_FILE = os.path.join(DATA_DIR, 'casaos_apps.json')
 INSTALLED_APPS_FILE = os.path.join(DATA_DIR, 'installed_apps.json')
@@ -4369,7 +4370,274 @@ def get_app_icon_url(app_id, image_name):
     
     return f"https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/{icon_name}.png"
 
-INSTALLED_APPS_FILE = os.path.join(DATA_DIR, 'installed_apps.json')
+def _localized_store_text(value, default=''):
+    if isinstance(value, dict):
+        return value.get('en_us') or value.get('en') or next((str(v) for v in value.values() if v), default)
+    if value is None:
+        return default
+    return str(value)
+
+def _load_store_json_list(path):
+    if not os.path.exists(path):
+        return []
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return data if isinstance(data, list) else []
+    except Exception as e:
+        print(f"Error loading store catalog {path}: {e}")
+        return []
+
+def _load_store_json_object(path):
+    if not os.path.exists(path):
+        return {}
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception as e:
+        print(f"Error loading store app config {path}: {e}")
+        return {}
+
+def _store_app_path(value, app_id):
+    if not value:
+        return ''
+    app_path = f"/opt/muhfi/apps/{app_id}"
+    return (
+        str(value)
+        .replace('/DATA/AppData/$AppID', app_path)
+        .replace('${APP_DATA_DIR}', app_path)
+        .replace('$AppID', app_id)
+    )
+
+def _parse_store_port(port):
+    try:
+        if isinstance(port, str):
+            value = port.strip().strip('"\'')
+            if not value:
+                return None
+            protocol = 'tcp'
+            if '/' in value:
+                value, protocol = value.rsplit('/', 1)
+            parts = value.split(':')
+            if len(parts) == 1:
+                host_port = parts[0]
+                container_port = parts[0]
+            else:
+                host_port = parts[-2]
+                container_port = parts[-1]
+            return {
+                'host': str(host_port),
+                'container': str(container_port),
+                'protocol': protocol or 'tcp'
+            }
+        if isinstance(port, dict):
+            container_port = port.get('target') or port.get('container')
+            host_port = port.get('published') or port.get('host') or container_port
+            if not container_port:
+                return None
+            return {
+                'host': str(host_port),
+                'container': str(container_port),
+                'protocol': str(port.get('protocol', 'tcp'))
+            }
+    except Exception:
+        return None
+    return None
+
+def _parse_store_volume(volume, app_id, descriptions=None):
+    descriptions = descriptions or {}
+    try:
+        if isinstance(volume, str):
+            parts = volume.strip().split(':')
+            if len(parts) < 2:
+                return None
+            host_path = _store_app_path(parts[0], app_id)
+            container_path = parts[1]
+        elif isinstance(volume, dict):
+            host_path = _store_app_path(volume.get('source') or volume.get('bind') or volume.get('host'), app_id)
+            container_path = volume.get('target') or volume.get('container')
+        else:
+            return None
+
+        if not host_path or not container_path:
+            return None
+        return {
+            'bind': host_path,
+            'container': str(container_path),
+            'description': descriptions.get(str(container_path), str(container_path))
+        }
+    except Exception:
+        return None
+
+def _parse_store_env(environment):
+    env_list = []
+    if isinstance(environment, list):
+        for item in environment:
+            if isinstance(item, str) and '=' in item:
+                key, value = item.split('=', 1)
+                env_list.append({'key': key, 'value': value})
+            elif isinstance(item, dict):
+                for key, value in item.items():
+                    env_list.append({'key': str(key), 'value': '' if value is None else str(value)})
+    elif isinstance(environment, dict):
+        for key, value in environment.items():
+            env_list.append({'key': str(key), 'value': '' if value is None else str(value)})
+    return env_list
+
+def _parse_store_app_folder(app_id, include_raw_compose=False):
+    app_dir = os.path.join(STORE_APPS_DIR, app_id)
+    if not os.path.isdir(app_dir):
+        return None
+
+    config = _load_store_json_object(os.path.join(app_dir, 'config.json'))
+    compose_path = os.path.join(app_dir, 'docker-compose.yml')
+    compose_text = ''
+    compose_data = {}
+
+    if os.path.exists(compose_path):
+        try:
+            with open(compose_path, 'r', encoding='utf-8') as f:
+                compose_text = f.read()
+            compose_data = yaml.safe_load(compose_text) or {}
+        except Exception as e:
+            print(f"Error parsing store app compose {app_id}: {e}")
+
+    services = compose_data.get('services', {}) if isinstance(compose_data, dict) else {}
+    casaos_meta = compose_data.get('x-casaos', {}) if isinstance(compose_data, dict) else {}
+    if not isinstance(casaos_meta, dict):
+        casaos_meta = {}
+
+    main_service_key = casaos_meta.get('main')
+    if main_service_key not in services and services:
+        main_service_key = next(iter(services))
+    main_service = services.get(main_service_key, {}) if main_service_key else {}
+    if not isinstance(main_service, dict):
+        main_service = {}
+
+    if not config and not main_service:
+        return None
+
+    service_meta = main_service.get('x-casaos', {})
+    if not isinstance(service_meta, dict):
+        service_meta = {}
+
+    volume_descriptions = {}
+    for item in service_meta.get('volumes', []) or []:
+        if isinstance(item, dict) and item.get('container'):
+            volume_descriptions[str(item.get('container'))] = _localized_store_text(item.get('description'), str(item.get('container')))
+
+    ports = [_parse_store_port(port) for port in (main_service.get('ports') or [])]
+    volumes = [_parse_store_volume(volume, app_id, volume_descriptions) for volume in (main_service.get('volumes') or [])]
+    image = main_service.get('image') or config.get('image') or ''
+    version = config.get('version')
+    if image and version and ':' not in image.rsplit('/', 1)[-1]:
+        image = f"{image}:{version}"
+
+    app = {
+        'id': app_id,
+        'name': _localized_store_text(casaos_meta.get('title'), app_id.replace('-', ' ').title()),
+        'description': _localized_store_text(casaos_meta.get('description')) or _localized_store_text(casaos_meta.get('tagline'), f"{app_id.replace('-', ' ').title()} application"),
+        'icon': casaos_meta.get('icon') or get_app_icon_url(app_id, image),
+        'category': casaos_meta.get('category') or 'Store Apps',
+        'developer': casaos_meta.get('developer') or '',
+        'image': image,
+        'port_map': str(casaos_meta.get('port_map', '')),
+        'ports': [port for port in ports if port],
+        'volumes': [volume for volume in volumes if volume],
+        'env': _parse_store_env(main_service.get('environment')),
+        'network_mode': main_service.get('network_mode', 'bridge'),
+        'source': 'store_apps'
+    }
+    if main_service.get('container_name'):
+        app['container_name'] = str(main_service.get('container_name'))
+
+    for key in ('cap_add', 'devices', 'command', 'privileged', 'restart'):
+        if key in main_service:
+            app[key] = main_service[key]
+
+    for key in ('version', 'youtube', 'docs_link'):
+        if config.get(key):
+            app[key] = config[key]
+
+    if include_raw_compose and compose_text:
+        app['raw_compose'] = compose_text
+
+    return app
+
+def load_store_apps_catalog(include_raw_compose=False):
+    catalog = []
+    target = CATALOG_FILE
+    if not os.path.exists(target):
+        fallback_path = os.path.join(os.getcwd(), 'store_apps', 'catalog.json')
+        if os.path.exists(fallback_path):
+            target = fallback_path
+
+    for app in _load_store_json_list(target):
+        if not isinstance(app, dict) or not app.get('id'):
+            continue
+        item = dict(app)
+        item['source'] = item.get('source') or 'default'
+        catalog.append(item)
+
+    by_id = {app['id']: app for app in catalog if app.get('id')}
+    if os.path.isdir(STORE_APPS_DIR):
+        for app_id in sorted(os.listdir(STORE_APPS_DIR)):
+            app_dir = os.path.join(STORE_APPS_DIR, app_id)
+            if not os.path.isdir(app_dir):
+                continue
+            parsed = None
+            if app_id not in by_id or include_raw_compose:
+                parsed = _parse_store_app_folder(app_id, include_raw_compose=include_raw_compose)
+            if app_id in by_id:
+                existing = by_id[app_id]
+                if parsed:
+                    for key in ('name', 'description', 'icon', 'category', 'developer', 'image', 'port_map', 'ports', 'volumes', 'env', 'network_mode', 'container_name'):
+                        if not existing.get(key) and parsed.get(key):
+                            existing[key] = parsed[key]
+                    if include_raw_compose and parsed.get('raw_compose'):
+                        existing['raw_compose'] = parsed['raw_compose']
+                continue
+            if parsed:
+                catalog.append(parsed)
+                by_id[app_id] = parsed
+
+    return catalog
+
+def load_full_store_catalog(include_raw_compose=False):
+    catalog = load_store_apps_catalog(include_raw_compose=include_raw_compose)
+
+    for app in _load_store_json_list(CASAOS_CATALOG_FILE):
+        if isinstance(app, dict) and app.get('id'):
+            item = dict(app)
+            item['source'] = item.get('source') or 'casaos'
+            catalog.append(item)
+
+    for app in _load_store_json_list(USER_CATALOG_FILE):
+        if isinstance(app, dict) and app.get('id'):
+            item = dict(app)
+            item['category'] = 'Custom'
+            item['is_custom'] = True
+            item['source'] = 'custom'
+            catalog.append(item)
+
+    seen = set()
+    deduped = []
+    for app in catalog:
+        app_id = app.get('id')
+        if not app_id or app_id in seen:
+            continue
+        if not include_raw_compose:
+            app.pop('raw_compose', None)
+        seen.add(app_id)
+        deduped.append(app)
+    return deduped
+
+def find_store_app_definition(app_id):
+    for app in load_full_store_catalog(include_raw_compose=True):
+        if app.get('id') == app_id:
+            return app
+    return None
 
 @app.route('/store')
 @login_required
@@ -4520,48 +4788,8 @@ def add_store_source():
 def get_app_catalog():
     """Get app catalog (Default + CasaOS + Custom)"""
     try:
-        catalog = []
-        
-        # 1. Load Default Catalog
-        target = CATALOG_FILE
-        if not os.path.exists(CATALOG_FILE):
-             fallback_path = os.path.join(os.getcwd(), 'store_apps', 'catalog.json')
-             if os.path.exists(fallback_path):
-                 target = fallback_path
-        
-        if os.path.exists(target):
-            with open(target, 'r', encoding='utf-8') as f:
-                default_apps = json.load(f)
-                for app in default_apps:
-                    app['source'] = 'default'
-                catalog.extend(default_apps)
-        
-        # 2. Load CasaOS Catalog
-        if os.path.exists(CASAOS_CATALOG_FILE):
-            try:
-                with open(CASAOS_CATALOG_FILE, 'r', encoding='utf-8') as f:
-                    casaos_apps = json.load(f)
-                    for app in casaos_apps:
-                        app['source'] = 'casaos'
-                    catalog.extend(casaos_apps)
-            except Exception as e:
-                print(f"Error loading CasaOS catalog: {e}")
-                
-        # 3. Load User Custom Catalog
-        if os.path.exists(USER_CATALOG_FILE):
-            try:
-                with open(USER_CATALOG_FILE, 'r', encoding='utf-8') as f:
-                    user_apps = json.load(f)
-                    # Mark as custom for UI distinction
-                    for app in user_apps:
-                        app['category'] = 'Custom'
-                        app['is_custom'] = True
-                        app['source'] = 'custom'
-                    catalog.extend(user_apps)
-            except:
-                pass # Ignore corrupt user file
-            
-        return jsonify({'catalog': catalog})
+        catalog = load_full_store_catalog(include_raw_compose=False)
+        return jsonify({'catalog': catalog, 'count': len(catalog)})
     except Exception as e:
         return jsonify({'error': str(e), 'catalog': []}), 500
 
@@ -4644,17 +4872,15 @@ def get_installed_apps():
         installed = []
         
         # Load Catalogs to find potential App IDs
-        full_catalog = []
-        if os.path.exists(CATALOG_FILE):
-             with open(CATALOG_FILE, 'r', encoding='utf-8') as f: full_catalog.extend(json.load(f))
-        if os.path.exists(USER_CATALOG_FILE):
-             with open(USER_CATALOG_FILE, 'r', encoding='utf-8') as f: full_catalog.extend(json.load(f))
+        full_catalog = load_full_store_catalog(include_raw_compose=True)
              
         for app in full_catalog:
             app_id = app['id']
-            # Check muhfi_ prefixed first (standard), then raw id (custom legacy?)
-            container_name = f"muhfi_{app_id}"
-            info = container_map.get(container_name) or container_map.get(app_id)
+            container_candidates = []
+            for candidate in (f"muhfi_{app_id}", app_id, app.get('container_name')):
+                if candidate and candidate not in container_candidates:
+                    container_candidates.append(candidate)
+            info = next((container_map.get(candidate) for candidate in container_candidates if container_map.get(candidate)), None)
             
             if info:
                 installed.append({
@@ -4698,22 +4924,21 @@ def install_worker(app_id, config, username):
         socketio.emit('install_log', {'app_id': app_id, 'message': f"Menyiapkan instalasi {app_id}...", 'type': 'info'})
         
         # Prepare params
+        found = None
         if app_id != 'custom':
-            found = None
-            try:
-                if os.path.exists(CATALOG_FILE):
-                    with open(CATALOG_FILE) as f:
-                        for a in json.load(f):
-                             if a['id'] == app_id: found = a; break
-            except: pass
+            found = find_store_app_definition(app_id)
             
             if not found:
                  socketio.emit('install_log', {'app_id': app_id, 'message': "App definition not found in catalog!", 'type': 'error'})
                  socketio.emit('install_complete', {'app_id': app_id, 'status': 'error'})
                  return
             
-            image = found['image']
+            image = found.get('image')
             name = app_id
+            if not image and not found.get('raw_compose'):
+                 socketio.emit('install_log', {'app_id': app_id, 'message': "App image not found in catalog!", 'type': 'error'})
+                 socketio.emit('install_complete', {'app_id': app_id, 'status': 'error'})
+                 return
             
             # HOTFIX: Force linuxserver for phpmyadmin on ARM
             if app_id == 'phpmyadmin':
@@ -4959,7 +5184,9 @@ def install_worker(app_id, config, username):
         # Save to installed_apps.json for dashboard tracking
         try:
             # Determine the actual container name
-            container_name = name if app_id != 'custom' else name
+            container_name = found.get('container_name') if found else name
+            if not container_name:
+                container_name = name
             
             # Get the first exposed port for URL generation
             first_port = None
