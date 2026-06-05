@@ -1,0 +1,7 @@
+{
+  "id": "immich-kiosk",
+  "version": "0.38.1",
+  "image": "ghcr.io/damongolding/immich-kiosk",
+  "youtube": "",
+  "docs_link": ""
+}

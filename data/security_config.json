@@ -1,0 +1,11 @@
+{
+  "username": "Satya",
+  "password_hash": "67d3b0c820bfb15eb4aa30b0e652329af2e18b5ce8796618afa315e3b952e276",
+  "role": "owner",
+  "session_timeout": 3600,
+  "require_auth": true,
+  "allowed_ips": [],
+  "max_login_attempts": 5,
+  "lockout_duration": 300,
+  "users": []
+}

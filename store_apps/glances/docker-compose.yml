@@ -1,0 +1,68 @@
+# Configuration for big-bear-glances setup
+name: big-bear-glances
+# Service definitions for the big-bear-glances application
+services:
+  # Service name: big-bear-glances
+  big-bear-glances:
+    # Name of the container
+    container_name: big-bear-glances
+    # Docker image to use
+    image: nicolargo/glances:4.5.3.2-full
+    # Port mapping between host and container
+    ports:
+      - 61208:61208
+    # Environment variables
+    environment:
+      - TZ=UTC # Timezone
+      - GLANCES_OPT=-w # Glances option to run as a web server
+    # Use the host's PID namespace
+    pid: host
+    # Container restart policy
+    restart: unless-stopped
+    # Volumes to mount into the container
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro # Docker socket for monitoring
+    x-casaos:
+      envs:
+        - container: TZ
+          description:
+            en_us: 'Container Variable: TZ'
+        - container: GLANCES_OPT
+          description:
+            en_us: 'Container Variable: GLANCES_OPT'
+      volumes:
+        - container: /var/run/docker.sock
+          description:
+            en_us: 'Container Path: /var/run/docker.sock'
+      ports:
+        - container: "61208"
+          description:
+            en_us: 'Container Port: 61208'
+x-casaos:
+  # Supported CPU architectures for this application
+  architectures:
+    - amd64
+    - arm64
+  # Main service for this application
+  main: big-bear-glances
+  # Detailed description for the application
+  description:
+    en_us: Glances is an open-source system cross-platform monitoring tool. It allows real-time monitoring of various aspects of your system such as CPU, memory, disk, network usage etc. It also allows monitoring of running processes, logged in users, temperatures, voltages, fan speeds etc. It also supports container monitoring, it supports different container management systems such as Docker, LXC. The information is presented in an easy to read dashboard and can also be used for remote monitoring of systems via a web interface or command line interface. It is easy to install and use and can be customized to show only the information that you are interested in.
+  # Brief tagline for the application
+  tagline:
+    en_us: Glances
+  # Developer's information
+  developer: nicolargo
+  # Author of this particular configuration
+  author: BigBearTechWorld
+  # Icon URL for the application
+  icon: https://cdn.jsdelivr.net/gh/selfhst/icons/png/glances.png
+  # Thumbnail image for the application (if any)
+  thumbnail: ""
+  # Title for the application
+  title:
+    en_us: Glances
+  # Category under which the application falls
+  category: BigBearCasaOS
+  # Default port mapping for the application
+  port_map: "61208"

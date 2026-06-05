@@ -1,0 +1,69 @@
+# big-bear-ntfy application configuration
+name: big-bear-ntfy
+# Services associated with the big-bear-ntfy application
+services:
+  # Main application service configuration
+  app:
+    # Docker image to be used for the service
+    image: binwiederhier/ntfy:v2.23.0
+    # Command to run inside the container
+    command:
+      - serve
+    # Environment variables for the service
+    environment:
+      - TZ=UTC
+    # Port configurations for the service
+    ports:
+      - target: 80 # Container port
+        published: "7200" # Host port
+        protocol: tcp # Protocol type
+    # Restart policy for the service
+    restart: unless-stopped
+    # Volumes to be mounted inside the container
+    volumes:
+      - /DATA/AppData/$AppID/cache:/var/cache/ntfy
+      - /DATA/AppData/$AppID/config:/etc/ntfy
+    x-casaos:
+      envs:
+        - container: TZ
+          description:
+            en_us: 'Container Variable: TZ'
+      volumes:
+        - container: /var/cache/ntfy
+          description:
+            en_us: 'Container Path: /var/cache/ntfy'
+        - container: /etc/ntfy
+          description:
+            en_us: 'Container Path: /etc/ntfy'
+      ports:
+        - container: "80"
+          description:
+            en_us: 'Container Port: 80'
+x-casaos:
+  # Supported CPU architectures for this application
+  architectures:
+    - amd64
+    - arm64
+  # Main service for this application
+  main: app
+  # Detailed description for the application
+  description:
+    en_us: ntfy (pronounced notify) is a simple HTTP-based pub-sub notification service. It allows you to send notifications to your phone or desktop via scripts from any computer, and/or using a REST API. It's infinitely flexible, and 100% free software.
+  # Brief tagline for the application
+  tagline:
+    en_us: A simple HTTP-based pub-sub notification service
+  # Developer's information
+  developer: binwiederhier
+  # Author of this particular configuration
+  author: BigBearTechWorld
+  # Icon URL for the application
+  icon: https://cdn.jsdelivr.net/gh/selfhst/icons/png/ntfy.png
+  # Thumbnail image for the application (if any)
+  thumbnail: https://ntfy.sh/_next/static/media/screenshot-web-3.de6f19af.png
+  # Title for the application
+  title:
+    en_us: Ntfy.sh
+  # Category under which the application falls
+  category: BigBearCasaOS
+  # Default port mapping for the application
+  port_map: "7200"

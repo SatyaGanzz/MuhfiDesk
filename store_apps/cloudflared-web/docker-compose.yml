@@ -1,0 +1,89 @@
+# Configuration for cloudflared-web setup
+
+# Name of the big-bear-cloudflared-web application
+name: big-bear-cloudflared-web
+# Service definitions for the big-bear-cloudflared-web application
+services:
+  # Service name: big-bear-cloudflared-web
+  # The `big-bear-cloudflared-web` service definition
+  big-bear-cloudflared-web:
+    # Name of the container
+    container_name: big-bear-cloudflared-web
+    # Image to be used for the container
+    image: wisdomsky/cloudflared-web:2026.5.2
+    # Container restart policy
+    restart: unless-stopped
+    # Network mode
+    network_mode: host
+    # Environment variables for the container
+    environment:
+      - WEBUI_PORT=14333
+      - EDGE_IP_VERSION=auto
+      - PROTOCOL=auto
+      - METRICS_ENABLE=false
+      - METRICS_PORT=60123
+      - BASIC_AUTH_USER=admin
+      - BASIC_AUTH_PASS=""
+    # Volumes for the service
+    volumes:
+      - /DATA/AppData/$AppID/config:/config
+    x-casaos:
+      envs:
+        - container: WEBUI_PORT
+          description:
+            en_us: 'Container Variable: WEBUI_PORT'
+        - container: EDGE_IP_VERSION
+          description:
+            en_us: 'Container Variable: EDGE_IP_VERSION'
+        - container: PROTOCOL
+          description:
+            en_us: 'Container Variable: PROTOCOL'
+        - container: METRICS_ENABLE
+          description:
+            en_us: 'Container Variable: METRICS_ENABLE'
+        - container: METRICS_PORT
+          description:
+            en_us: 'Container Variable: METRICS_PORT'
+        - container: BASIC_AUTH_USER
+          description:
+            en_us: 'Container Variable: BASIC_AUTH_USER'
+        - container: BASIC_AUTH_PASS
+          description:
+            en_us: 'Container Variable: BASIC_AUTH_PASS'
+      volumes:
+        - container: /config
+          description:
+            en_us: 'Container Path: /config'
+x-casaos:
+  # Supported CPU architectures for this application
+  architectures:
+    - amd64
+    - arm64
+  # Main service for this application
+  main: big-bear-cloudflared-web
+  # Detailed description for the application
+  description:
+    en_us: Cloudflared-web is a docker image that packages both cloudflared cli and a simple Web UI to easily start or stop remotely-managed Cloudflare tunnel.
+  # Brief tagline for the application
+  tagline:
+    en_us: Cloudflared Web
+  # Developer's information
+  developer: wisdomsky
+  # Author of this particular configuration
+  author: BigBearTechWorld
+  # Icon URL for the application
+  icon: https://cdn.jsdelivr.net/gh/selfhst/icons/png/cloudflare.png
+  # Thumbnail image for the application (if any)
+  thumbnail: ""
+  # Installation tips
+  tips:
+    before_install:
+      en_us: |
+        Read this before installing: https://community.bigbeartechworld.com/t/added-cloudflared-web-to-bigbearcasaos/2275?u=dragonfire1119
+  # Title for the application
+  title:
+    en_us: Cloudflared Web
+  # Category under which the application falls
+  category: BigBearCasaOS
+  # Default port mapping for the application
+  port_map: "14333"

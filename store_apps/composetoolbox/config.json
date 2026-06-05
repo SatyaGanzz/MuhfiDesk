@@ -1,0 +1,7 @@
+{
+  "id": "composetoolbox",
+  "version": "latest",
+  "image": "ghcr.io/bluegoosemedia/composetoolbox",
+  "youtube": "",
+  "docs_link": "https://github.com/bluegoosemedia/composetoolbox"
+}

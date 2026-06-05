@@ -778,7 +778,7 @@
 
         let allApps = [];
         let currentApp = null;
-        let installedApps = {}; // Map: id -> { running: bool, ports: [] }
+        let installedApps = {}; // Map: catalog_app_id -> { running, ports, container_name }
         let currentCategory = 'All';
         let logItems = [];
         
@@ -787,16 +787,23 @@
 
         socket.on('install_log', function (data) {
             addLog(data.message, data.type, data.app_id);
+            // Auto-buka log panel saat ada log
+            const panel = document.getElementById('log-panel');
+            if (!panel.classList.contains('active')) {
+                panel.classList.add('active');
+            }
         });
 
         socket.on('install_complete', function (data) {
             if (data.status === 'success') {
-                showToast(`${data.app_id} installed successfully!`, 'success');
+                showToast(`${data.app_id} berhasil diinstall!`, 'success');
+                addLog(`✅ Instalasi selesai!`, 'success', data.app_id);
                 setTimeout(() => {
                     loadInstalledApps().then(applyFilters);
                 }, 1500);
             } else {
-                showToast(`Installation failed: ${data.error || 'Unknown error'}`, 'error');
+                showToast(`Instalasi gagal: ${data.error || 'Unknown error'}`, 'error');
+                addLog(`❌ Gagal: ${data.error || 'Unknown error'}`, 'error', data.app_id);
             }
         });
 
@@ -869,20 +876,38 @@
                 .then(r => r.json())
                 .then(data => {
                     installedApps = {};
-                    if (data.installed) {
-                        if (Array.isArray(data.installed)) {
-                            data.installed.forEach(item => {
-                                if (typeof item === 'string') {
-                                    installedApps[item] = { running: true };
-                                } else {
-                                    installedApps[item.id] = item;
-                                }
-                            });
-                        }
+                    if (data.installed && Array.isArray(data.installed)) {
+                        data.installed.forEach(item => {
+                            // item.id = nama container Docker (e.g. "big-bear-portainer", "portainer")
+                            const cname = (item.id || item.container_name || '').toLowerCase();
+                            
+                            // Simpan dengan key = container name asli
+                            installedApps[cname] = item;
+                            
+                            // Juga simpan versi tanpa prefix "big-bear-"
+                            const stripped = cname.replace(/^big-bear-/, '');
+                            if (stripped !== cname) {
+                                installedApps[stripped] = item;
+                            }
+                        });
                     }
                 })
                 .catch(console.error);
         }
+
+        function isAppInstalled(appId) {
+            const id = (appId || '').toLowerCase();
+            // Cek langsung
+            if (installedApps[id]) return installedApps[id];
+            // Cek dengan prefix big-bear-
+            if (installedApps['big-bear-' + id]) return installedApps['big-bear-' + id];
+            // Partial match: cari container yang namanya mengandung app_id
+            const keys = Object.keys(installedApps);
+            const match = keys.find(k => k.includes(id) || id.includes(k));
+            return match ? installedApps[match] : null;
+        }
+
+
 
         function loadApps() {
             const grid = document.getElementById('apps-grid');
@@ -936,9 +961,9 @@
                 if (currentCategory !== 'All' && app.category !== currentCategory) return false;
                 if (search && !app.name.toLowerCase().includes(search) && !app.description.toLowerCase().includes(search)) return false;
 
-                const isInstalled = !!installedApps[app.id];
-                if (statusFilter === 'installed' && !isInstalled) return false;
-                if (statusFilter === 'not_installed' && isInstalled) return false;
+                const info = isAppInstalled(app.id);
+                if (statusFilter === 'installed' && !info) return false;
+                if (statusFilter === 'not_installed' && info) return false;
 
                 return true;
             });
@@ -956,7 +981,7 @@
             const canManage = (window.userRole === 'owner' || window.userRole === 'admin');
 
             container.innerHTML = apps.map(app => {
-                const info = installedApps[app.id];
+                const info = isAppInstalled(app.id);
                 const isInstalled = !!info;
                 const isRunning = info && info.running;
                 const isCustom = app.category === 'Custom';
@@ -1008,7 +1033,8 @@
 
         function openApp(appId) {
             const app = allApps.find(a => a.id === appId);
-            const installedInfo = installedApps[appId];
+            const installedInfo = isAppInstalled(appId);
+
 
             let port = null;
             let protocol = 'http';

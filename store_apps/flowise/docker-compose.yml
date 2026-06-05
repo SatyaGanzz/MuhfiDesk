@@ -1,0 +1,121 @@
+# Configuration for flowise setup
+
+# Name of the big-bear-flowise application
+name: big-bear-flowise
+# Service definitions for the big-bear-flowise application
+services:
+  # Service name: big-bear-flowise
+  # The `big-bear-flowise` service definition
+  big-bear-flowise:
+    # Name of the container
+    container_name: big-bear-flowise
+    # Image to be used for the container specifies the flowise version and source
+    image: flowiseai/flowise:3.1.2
+    # Container restart policy - restarts the container unless manually stopped
+    restart: unless-stopped
+    # Entrypoint to be used for the container
+    entrypoint: /bin/sh -c "sleep 3; flowise start"
+    # Environment variables to be set in the container for application configuration
+    environment:
+      - PORT=8009
+      - FLOWISE_USERNAME=bigbear
+      - FLOWISE_PASSWORD=b0f91e4c-9d4b-4375-bc9b-9b57667ce7ab
+      - FLOWISE_SECRETKEY_OVERWRITE="true"
+      - LANGCHAIN_ENDPOINT=""
+      - LANGCHAIN_API_KEY=""
+      - LANGCHAIN_PROJECT=""
+      - LANGCHAIN_TRACING_V2=""
+      - DISABLE_FLOWISE_TELEMETRY="true"
+      - DATABASE_PATH=/root/.flowise
+      - APIKEY_PATH=/root/.flowise
+      - SECRETKEY_PATH=/root/.flowise/logs
+      - LOG_PATH=/root/.flowise
+    # Ports mapping between host and container
+    ports:
+      # Mapping port 8009 of the host to port 8009 of the container
+      - "8009:8009"
+    # Volumes to be mounted to the container
+    volumes:
+      - /DATA/AppData/$AppID/data:/root/.flowise
+    x-casaos:
+      envs:
+        - container: PORT
+          description:
+            en_us: 'Container Variable: PORT'
+        - container: FLOWISE_USERNAME
+          description:
+            en_us: 'Container Variable: FLOWISE_USERNAME'
+        - container: FLOWISE_PASSWORD
+          description:
+            en_us: 'Container Variable: FLOWISE_PASSWORD'
+        - container: FLOWISE_SECRETKEY_OVERWRITE
+          description:
+            en_us: 'Container Variable: FLOWISE_SECRETKEY_OVERWRITE'
+        - container: LANGCHAIN_ENDPOINT
+          description:
+            en_us: 'Container Variable: LANGCHAIN_ENDPOINT'
+        - container: LANGCHAIN_API_KEY
+          description:
+            en_us: 'Container Variable: LANGCHAIN_API_KEY'
+        - container: LANGCHAIN_PROJECT
+          description:
+            en_us: 'Container Variable: LANGCHAIN_PROJECT'
+        - container: LANGCHAIN_TRACING_V2
+          description:
+            en_us: 'Container Variable: LANGCHAIN_TRACING_V2'
+        - container: DISABLE_FLOWISE_TELEMETRY
+          description:
+            en_us: 'Container Variable: DISABLE_FLOWISE_TELEMETRY'
+        - container: DATABASE_PATH
+          description:
+            en_us: 'Container Variable: DATABASE_PATH'
+        - container: APIKEY_PATH
+          description:
+            en_us: 'Container Variable: APIKEY_PATH'
+        - container: SECRETKEY_PATH
+          description:
+            en_us: 'Container Variable: SECRETKEY_PATH'
+        - container: LOG_PATH
+          description:
+            en_us: 'Container Variable: LOG_PATH'
+      volumes:
+        - container: /root/.flowise
+          description:
+            en_us: 'Container Path: /root/.flowise'
+      ports:
+        - container: "8009"
+          description:
+            en_us: 'Container Port: 8009'
+x-casaos:
+  # Supported CPU architectures for this application
+  architectures:
+    - amd64
+    - arm64
+  # Main service for this application
+  main: big-bear-flowise
+  # Detailed description for the application
+  description:
+    en_us: Flowise AI is an Open source UI visual tool to build your customized LLM orchestration flow & AI agents. Developing LLM apps takeslength iterations. With low code approach, Flowise AI enable quick iterations to go from testing to production.
+  # Brief tagline for the application
+  tagline:
+    en_us: Build LLM Apps Easily
+  # Developer's information
+  developer: bigbeartechworld
+  # Author of this particular configuration
+  author: BigBearTechWorld
+  # Icon URL for the application
+  icon: https://cdn.jsdelivr.net/gh/bigbeartechworld/big-bear-universal-apps/apps/flowise/logo.png
+  # Thumbnail image for the application (if any)
+  thumbnail: ""
+  # Installation tips
+  tips:
+    before_install:
+      en_us: |
+        Read this before installing: https://community.bigbeartechworld.com/t/added-flowise-to-bigbearcasaos/1989?u=dragonfire1119
+  # Title for the application
+  title:
+    en_us: Flowise AI
+  # Category under which the application falls
+  category: BigBearCasaOS
+  # Default port mapping for the application
+  port_map: "8009"

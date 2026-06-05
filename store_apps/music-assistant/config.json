@@ -1,0 +1,7 @@
+{
+  "id": "music-assistant",
+  "version": "2.8.7",
+  "image": "ghcr.io/music-assistant/server",
+  "youtube": "",
+  "docs_link": ""
+}

@@ -1,0 +1,62 @@
+# Configuration for music-assistant setup
+
+# Name of the big-bear-music-assistant application
+name: big-bear-music-assistant
+# Service definitions for the big-bear-music-assistant application
+services:
+  # Service name: big-bear-music-assistant-server
+  # The `appserver service definition
+  big-bear-music-assistant-server:
+    # Name of the container
+    container_name: big-bear-music-assistant-server
+    # Image to be used for the container
+    image: ghcr.io/music-assistant/server:2.8.7
+    # Container restart policy
+    restart: unless-stopped
+    # Volumes to be mounted to the container
+    volumes:
+      - /DATA/AppData/$AppID/data:/data
+    # Network mode for the container
+    network_mode: host
+    # Security options for container runtime
+    security_opt:
+      # Allows necessary system calls for full functionality
+      - apparmor:unconfined
+    # Additional container capabilities
+    cap_add:
+      # Required for system administration tasks within the container
+      - SYS_ADMIN
+      - DAC_READ_SEARCH
+    x-casaos:
+      volumes:
+        - container: /data
+          description:
+            en_us: 'Container Path: /data'
+x-casaos:
+  # Supported CPU architectures for this application
+  architectures:
+    - amd64
+    - arm64
+  # Main service for this application
+  main: big-bear-music-assistant-server
+  # Detailed description for the application
+  description:
+    en_us: Music Assistant is a music library manager for your offline and online music sources which can easily stream your favourite music to a wide range of supported players and be combined with the power of Home Assistant!
+  # Brief tagline for the application
+  tagline:
+    en_us: Home Automation
+  # Developer's information
+  developer: music-assistant
+  # Author of this particular configuration
+  author: Tofil
+  # Icon URL for the application
+  icon: https://cdn.jsdelivr.net/gh/bigbeartechworld/big-bear-universal-apps/apps/music-assistant/logo.png
+  # Thumbnail image for the application (if any)
+  thumbnail: https://www.music-assistant.io/assets/banner.png
+  # Title for the application
+  title:
+    en_us: Music Assistant
+  # Category under which the application falls
+  category: BigBearCasaOS
+  # Default port mapping for the application
+  port_map: "8095"

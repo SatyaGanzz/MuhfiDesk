@@ -1,0 +1,77 @@
+# Configuration for netalertx setup
+
+# Name of the big-bear-netalertx application
+name: big-bear-netalertx
+# Service definitions for the big-bear-netalertx application
+services:
+  # Service name: big-bear-netalertx
+  # The `big-bear-netalertx` service definition
+  big-bear-netalertx:
+    # Name of the container
+    container_name: big-bear-netalertx
+    # Image to be used for the container
+    image: jokobsk/netalertx:25.11.29
+    # Container restart policy
+    restart: unless-stopped
+    # Make the container privileged
+    privileged: true
+    # Volumes to be mounted to the container
+    volumes:
+      # Mounting the local netalertx_config directory to /app/config inside the container
+      - /DATA/AppData/$AppID/config:/app/config
+      # Mounting the local netalertx_db directory to /app/db inside the container
+      - /DATA/AppData/$AppID/db:/app/db
+    # Environment variables
+    environment:
+      - TZ=UTC
+      - PORT=8080
+      # ❗ DANGER ZONE BELOW - Setting ALWAYS_FRESH_INSTALL=true will delete the content of the /db & /config folders
+      - ALWAYS_FRESH_INSTALL=false
+    # Network mode for the container
+    network_mode: host
+    x-casaos:
+      envs:
+        - container: TZ
+          description:
+            en_us: 'Container Variable: TZ'
+        - container: PORT
+          description:
+            en_us: 'Container Variable: PORT'
+        - container: ALWAYS_FRESH_INSTALL
+          description:
+            en_us: 'Container Variable: ALWAYS_FRESH_INSTALL'
+      volumes:
+        - container: /app/config
+          description:
+            en_us: 'Container Path: /app/config'
+        - container: /app/db
+          description:
+            en_us: 'Container Path: /app/db'
+x-casaos:
+  # Supported CPU architectures for this application
+  architectures:
+    - amd64
+    - arm64
+  # Main service for this application
+  main: big-bear-netalertx
+  # Detailed description for the application
+  description:
+    en_us: 'WIFI / LAN intruder detector. Scans for devices connected to your network and alerts you if new and unknown devices are found. NOTE: This is the legacy version (frozen at 25.11.29). For new installs, use NetAlertX v26 which has improved security and updated volume paths.'
+  # Brief tagline for the application
+  tagline:
+    en_us: NetAlertX (Legacy)
+  # Developer's information
+  developer: jokobsk
+  # Author of this particular configuration
+  author: BigBearTechWorld
+  # Icon URL for the application
+  icon: https://cdn.jsdelivr.net/gh/selfhst/icons/png/pi-alert.png
+  # Thumbnail image for the application (if any)
+  thumbnail: ""
+  # Title for the application
+  title:
+    en_us: NetAlertX (Legacy)
+  # Category under which the application falls
+  category: BigBearCasaOS
+  # Default port mapping for the application
+  port_map: "8080"

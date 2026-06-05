@@ -1,0 +1,71 @@
+# Configuration for kavita setup
+
+# Name of the big-bear-kavita application
+name: big-bear-kavita
+# Service definitions for the big-bear-kavita application
+services:
+  # Service name: big-bear-kavita
+  # The `big-bear-kavita` service definition
+  big-bear-kavita:
+    # Name of the container
+    container_name: big-bear-kavita
+    # Image to be used for the container
+    image: jvmilazz0/kavita:0.9.0
+    # Container restart policy
+    restart: unless-stopped
+    # Volumes to be mounted to the container
+    volumes:
+      - /DATA/AppData/$AppID/data/kavita-config:/kavita/config
+      - /DATA/AppData/$AppID/media/data/books:/books
+      - /DATA/AppData/$AppID/media/data/comics:/comics
+      - /DATA/AppData/$AppID/media/data/manga:/manga
+    # Ports mapping between host and container
+    ports:
+      # Mapping port 5000 of the host to port 5000 of the container
+      - "5000:5000"
+    x-casaos:
+      volumes:
+        - container: /kavita/config
+          description:
+            en_us: 'Container Path: /kavita/config'
+        - container: /books
+          description:
+            en_us: 'Container Path: /books'
+        - container: /comics
+          description:
+            en_us: 'Container Path: /comics'
+        - container: /manga
+          description:
+            en_us: 'Container Path: /manga'
+      ports:
+        - container: "5000"
+          description:
+            en_us: 'Container Port: 5000'
+x-casaos:
+  # Supported CPU architectures for this application
+  architectures:
+    - amd64
+    - arm64
+  # Main service for this application
+  main: big-bear-kavita
+  # Detailed description for the application
+  description:
+    en_us: Kavita is a fast, feature rich, cross platform reading server
+  # Brief tagline for the application
+  tagline:
+    en_us: Kavita
+  # Developer's information
+  developer: jvmilazz0
+  # Author of this particular configuration
+  author: BigBearTechWorld
+  # Icon URL for the application
+  icon: https://cdn.jsdelivr.net/gh/selfhst/icons/png/kavita.png
+  # Thumbnail image for the application (if any)
+  thumbnail: ""
+  # Title for the application
+  title:
+    en_us: Kavita
+  # Category under which the application falls
+  category: BigBearCasaOS
+  # Default port mapping for the application
+  port_map: "5000"

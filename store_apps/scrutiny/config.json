@@ -1,0 +1,7 @@
+{
+  "id": "scrutiny",
+  "version": "master-omnibus",
+  "image": "ghcr.io/analogj/scrutiny",
+  "youtube": "",
+  "docs_link": ""
+}

@@ -1,0 +1,7 @@
+{
+  "id": "ejbca-ce",
+  "version": "9.3.7",
+  "image": "keyfactor/ejbca-ce",
+  "youtube": "",
+  "docs_link": "https://doc.primekey.com/ejbca/ejbca-introduction"
+}

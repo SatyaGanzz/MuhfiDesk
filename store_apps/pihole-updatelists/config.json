@@ -1,0 +1,7 @@
+{
+  "id": "pihole-updatelists",
+  "version": "2026.05.0",
+  "image": "jacklul/pihole",
+  "youtube": "",
+  "docs_link": ""
+}

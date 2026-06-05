@@ -1,0 +1,7 @@
+{
+  "id": "dbgate",
+  "version": "7.1.13-alpine",
+  "image": "dbgate/dbgate",
+  "youtube": "",
+  "docs_link": ""
+}

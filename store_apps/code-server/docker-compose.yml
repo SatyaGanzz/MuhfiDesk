@@ -1,0 +1,80 @@
+# Configuration for big-bear-code-server setup
+name: big-bear-code-server
+# Service definitions for the big-bear-code-server application
+services:
+  # Service name: app
+  app:
+    image: linuxserver/code-server:4.122.0 # The Docker image to be used for the service
+    container_name: code-server # Name of the container instance
+    environment:
+      - PUID=1000 # User ID under which code-server will run
+      - PGID=1000 # Group ID under which code-server will run
+      - TZ=UTC # Timezone for the container
+      - PASSWORD=my_password # Password to access code-server
+      - SUDO_PASSWORD=sudo_my_password # Password to access code-server
+      - DEFAULT_WORKSPACE=/config/workspace
+    volumes:
+      - /DATA/AppData/$AppID/config:/config #config dir
+      - /DATA/AppData/$AppID/projects:/projects #project dir
+    ports:
+      - "8080:8443" # Expose code-server's port 8080 on the host's port 8080
+    restart: always # Policy to restart the container if it stops unexpectedly
+    x-casaos:
+      envs:
+        - container: PUID
+          description:
+            en_us: 'Container Variable: PUID'
+        - container: PGID
+          description:
+            en_us: 'Container Variable: PGID'
+        - container: TZ
+          description:
+            en_us: 'Container Variable: TZ'
+        - container: PASSWORD
+          description:
+            en_us: 'Container Variable: PASSWORD'
+        - container: SUDO_PASSWORD
+          description:
+            en_us: 'Container Variable: SUDO_PASSWORD'
+        - container: DEFAULT_WORKSPACE
+          description:
+            en_us: 'Container Variable: DEFAULT_WORKSPACE'
+      volumes:
+        - container: /config
+          description:
+            en_us: 'Container Path: /config'
+        - container: /projects
+          description:
+            en_us: 'Container Path: /projects'
+      ports:
+        - container: "8443"
+          description:
+            en_us: 'Container Port: 8443'
+x-casaos:
+  # Supported CPU architectures for this application
+  architectures:
+    - amd64
+    - arm64
+  # Main service for this application
+  main: app
+  # Detailed description for the application
+  description:
+    en_us: Run VS Code on any machine anywhere and access it in the browser.
+  # Brief tagline for the application
+  tagline:
+    en_us: Code Server
+  # Developer's information
+  developer: linuxserver
+  # Author of this particular configuration
+  author: BigBearTechWorld
+  # Icon URL for the application
+  icon: https://cdn.jsdelivr.net/gh/selfhst/icons/png/coder.png
+  # Thumbnail image for the application (if any)
+  thumbnail: ""
+  # Title for the application
+  title:
+    en_us: Code Server
+  # Category under which the application falls
+  category: BigBearCasaOS
+  # Default port mapping for the application
+  port_map: "8080"

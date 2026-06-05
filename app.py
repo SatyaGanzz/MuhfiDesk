@@ -121,7 +121,7 @@ CORS(app, supports_credentials=True)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 # Start background threads only in the main worker process
-if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or ('debug=True' not in open(__file__).read() and not os.environ.get('FLASK_DEBUG')):
+if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or ('debug=True' not in open(__file__, encoding='utf-8').read() and not os.environ.get('FLASK_DEBUG')):
     # Start Energy Thread
     t_energy = threading.Thread(target=energy_monitor_loop, daemon=True)
     t_energy.start()
@@ -7199,7 +7199,6 @@ def gdrive_callback():
         )
         flow.fetch_token(authorization_response=request.url)
         creds = flow.credentials
-
         with open(GDRIVE_TOKEN_FILE, 'w') as token_file:
             token_file.write(creds.to_json())
         harden_file_permissions(GDRIVE_TOKEN_FILE)
@@ -7207,6 +7206,375 @@ def gdrive_callback():
         return redirect('/files')
     except Exception as e:
         return f"Error during authorization: {e}", 500
+
+# ==========================================
+#  APP STORE - BigBear CasaOS Catalog
+# ==========================================
+
+# Lokasi database aplikasi (hasil extract dari big-bear-casaos-master)
+STORE_APPS_DIR  = os.path.join(BASE_DIR, 'store_apps')
+STORE_CATALOG_JSON = os.path.join(STORE_APPS_DIR, 'catalog.json')
+
+def parse_casaos_compose(app_id, compose_path):
+    """Parse docker-compose.yml dari BigBear CasaOS dan ekstrak metadata."""
+    try:
+        with open(compose_path, 'r', encoding='utf-8') as f:
+            data = yaml.safe_load(f)
+
+        if not data:
+            return None
+
+        casaos_meta = data.get('x-casaos', {}) or {}
+
+        def get_text(field):
+            val = casaos_meta.get(field, {})
+            if isinstance(val, dict):
+                return val.get('en_us', '') or ''
+            return str(val) if val else ''
+
+        name        = get_text('title') or app_id
+        description = get_text('description') or get_text('tagline')
+        icon        = casaos_meta.get('icon', '') or ''
+        category    = casaos_meta.get('category', 'BigBearCasaOS') or 'BigBearCasaOS'
+        developer   = casaos_meta.get('developer', '') or ''
+        port_map    = str(casaos_meta.get('port_map', '')) or ''
+        main_svc    = casaos_meta.get('main', 'app') or 'app'
+
+        services = data.get('services', {}) or {}
+        svc = services.get(main_svc) or (next(iter(services.values())) if services else {})
+        image = svc.get('image', '') if svc else ''
+
+        ports = []
+        for p in (svc.get('ports', []) if svc else []):
+            s = str(p).strip().strip('"\'')
+            parts = s.split(':')
+            if len(parts) == 2:
+                host = parts[0]; cont = parts[1].split('/')[0]
+                proto = parts[1].split('/')[1] if '/' in parts[1] else 'tcp'
+                ports.append({'host': host, 'container': cont, 'protocol': proto})
+            elif len(parts) == 3:
+                ports.append({'host': parts[1], 'container': parts[2].split('/')[0], 'protocol': 'tcp'})
+
+        volumes = []
+        for v in (svc.get('volumes', []) if svc else []):
+            vparts = str(v).split(':')
+            if len(vparts) >= 2:
+                volumes.append({'bind': vparts[0], 'container': vparts[1], 'description': vparts[1]})
+
+        env_list = []
+        raw_env = svc.get('environment', []) if svc else []
+        if isinstance(raw_env, list):
+            for e in raw_env:
+                if '=' in str(e):
+                    k, v = str(e).split('=', 1)
+                    env_list.append({'key': k, 'value': v})
+        elif isinstance(raw_env, dict):
+            for k, v in raw_env.items():
+                env_list.append({'key': k, 'value': str(v) if v is not None else ''})
+
+        compose_dir = os.path.dirname(compose_path)
+        return {
+            'id': app_id, 'name': name, 'description': description,
+            'icon': icon, 'category': category, 'developer': developer,
+            'image': image, 'port_map': port_map, 'ports': ports,
+            'volumes': volumes, 'env': env_list,
+            'compose_path': compose_path, 'compose_dir': compose_dir
+        }
+    except Exception as e:
+        print(f"[STORE] Error parsing {app_id}: {e}")
+        return None
+
+
+def get_store_catalog():
+    """
+    Return catalog dari store_apps/catalog.json (pre-built, cepat).
+    Jika tidak ada, fallback ke live parse dari folder store_apps/{app_id}/docker-compose.yml.
+    Selalu inject compose_path dan compose_dir (path lokal) ke setiap entry.
+    """
+    # --- Fast path: baca catalog.json ---
+    if os.path.isfile(STORE_CATALOG_JSON):
+        try:
+            with open(STORE_CATALOG_JSON, 'r', encoding='utf-8') as f:
+                catalog_raw = json.load(f)
+            # Inject compose_path dan compose_dir yang dibutuhkan oleh install/uninstall
+            catalog = []
+            for app in catalog_raw:
+                app_id = app.get('id', '')
+                compose_dir  = os.path.join(STORE_APPS_DIR, app_id)
+                compose_path = os.path.join(compose_dir, 'docker-compose.yml')
+                entry = dict(app)
+                entry['compose_dir']  = compose_dir
+                entry['compose_path'] = compose_path
+                catalog.append(entry)
+            return catalog
+        except Exception as e:
+            print(f"[STORE] catalog.json read error, falling back to live parse: {e}")
+
+    # --- Fallback: live parse ---
+    catalog = []
+    if not os.path.isdir(STORE_APPS_DIR):
+        return catalog
+    for app_folder in sorted(os.listdir(STORE_APPS_DIR)):
+        app_dir = os.path.join(STORE_APPS_DIR, app_folder)
+        if not os.path.isdir(app_dir):
+            continue
+        compose_path = os.path.join(app_dir, 'docker-compose.yml')
+        if not os.path.isfile(compose_path):
+            continue
+        parsed = parse_casaos_compose(app_folder, compose_path)
+        if parsed:
+            catalog.append(parsed)
+    return catalog
+
+
+@app.route('/store')
+@login_required
+def store_page():
+    return render_template('store.html')
+
+
+@app.route('/api/store/catalog')
+@login_required
+def api_store_catalog():
+    """Return daftar semua aplikasi dari big-bear-casaos-master/Apps."""
+    try:
+        catalog = get_store_catalog()
+        # Hapus field internal dari response
+        public_catalog = []
+        for app in catalog:
+            pub = {k: v for k, v in app.items() if k not in ('compose_path', 'compose_dir')}
+            public_catalog.append(pub)
+        return jsonify({'catalog': public_catalog, 'total': len(public_catalog)})
+    except Exception as e:
+        return jsonify({'error': str(e), 'catalog': []}), 500
+
+
+@app.route('/api/store/installed')
+@login_required
+def api_store_installed():
+    """Cek container Docker yang sedang running dan cocokkan dengan katalog."""
+    try:
+        client = docker.from_env()
+        containers = client.containers.list(all=True)
+
+        installed = []
+        for c in containers:
+            name = c.name
+            status = c.status  # 'running', 'exited', etc.
+            ports_info = []
+            if c.ports:
+                for container_port, bindings in c.ports.items():
+                    if bindings:
+                        for b in bindings:
+                            ports_info.append({
+                                'container': container_port.split('/')[0],
+                                'host': b.get('HostPort', ''),
+                                'protocol': 'tcp'
+                            })
+
+            installed.append({
+                'id': name,
+                'container_name': name,
+                'running': status == 'running',
+                'status': status,
+                'ports': ports_info,
+                'image': c.image.tags[0] if c.image.tags else ''
+            })
+
+        return jsonify({'installed': installed})
+    except Exception as e:
+        return jsonify({'installed': [], 'error': str(e)}), 200
+
+
+def _install_catalog_app(app_id, config, sid=None):
+    """Thread worker: jalankan docker compose up -d dari folder aplikasi."""
+    def emit_log(message, log_type='info'):
+        socketio.emit('install_log', {
+            'message': message,
+            'type': log_type,
+            'app_id': app_id
+        })
+
+    def emit_progress(percent, message=''):
+        socketio.emit('install_progress', {
+            'percent': percent,
+            'message': message
+        })
+
+    try:
+        # Cari compose_dir dari katalog
+        catalog = get_store_catalog()
+        app_meta = next((a for a in catalog if a['id'] == app_id), None)
+
+        if not app_meta:
+            emit_log(f"❌ App '{app_id}' tidak ditemukan di katalog!", 'error')
+            socketio.emit('install_complete', {'status': 'error', 'error': 'App not found', 'app_id': app_id})
+            return
+
+        compose_dir = app_meta['compose_dir']
+        compose_file = app_meta['compose_path']
+
+        if not os.path.isfile(compose_file):
+            emit_log(f"❌ docker-compose.yml tidak ditemukan: {compose_file}", 'error')
+            socketio.emit('install_complete', {'status': 'error', 'error': 'compose not found', 'app_id': app_id})
+            return
+
+        emit_log(f"📦 Memulai instalasi {app_meta['name']}...", 'info')
+        emit_log(f"📁 Direktori: {compose_dir}", 'dim')
+        emit_progress(5, f"Pulling image {app_meta.get('image', '')}...")
+
+        # Jalankan: docker compose up -d
+        cmd = ['docker', 'compose', '-f', compose_file, 'up', '-d', '--pull', 'always']
+        emit_log(f"▶ Menjalankan: {' '.join(cmd)}", 'dim')
+
+        process = subprocess.Popen(
+            cmd,
+            cwd=compose_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding='utf-8',
+            errors='replace'
+        )
+
+        progress = 10
+        for line in iter(process.stdout.readline, ''):
+            line = line.rstrip()
+            if not line:
+                continue
+
+            # Tentukan tipe log
+            log_type = 'info'
+            if 'error' in line.lower() or 'failed' in line.lower():
+                log_type = 'error'
+            elif 'pull' in line.lower() or 'download' in line.lower() or 'pulling' in line.lower():
+                log_type = 'downloading'
+                if progress < 70:
+                    progress += 2
+            elif 'started' in line.lower() or 'running' in line.lower() or 'created' in line.lower():
+                log_type = 'success'
+                progress = max(progress, 90)
+            elif 'warning' in line.lower():
+                log_type = 'warning'
+
+            emit_log(line, log_type)
+            emit_progress(min(progress, 95), line[:60])
+
+        process.wait()
+
+        if process.returncode == 0:
+            emit_progress(100, 'Installation complete!')
+            emit_log(f"✅ {app_meta['name']} berhasil diinstal!", 'success')
+            socketio.emit('install_complete', {'status': 'success', 'app_id': app_id})
+            audit_log('STORE_INSTALL', f"Installed {app_id}", session.get('username', 'system'))
+        else:
+            emit_log(f"❌ Docker compose gagal (exit code {process.returncode})", 'error')
+            socketio.emit('install_complete', {'status': 'error', 'error': f'Exit code {process.returncode}', 'app_id': app_id})
+
+    except Exception as e:
+        emit_log(f"❌ Error: {str(e)}", 'error')
+        socketio.emit('install_complete', {'status': 'error', 'error': str(e), 'app_id': app_id})
+
+
+@app.route('/api/store/install', methods=['POST'])
+@admin_required
+def api_store_install():
+    """Trigger instalasi aplikasi dari katalog BigBear CasaOS."""
+    data = request.json or {}
+    app_id = data.get('app_id', '').strip()
+    config = data.get('config', {})
+
+    if not app_id:
+        return jsonify({'error': 'app_id diperlukan'}), 400
+
+    # Jalankan di background thread
+    t = threading.Thread(
+        target=_install_catalog_app,
+        args=(app_id, config),
+        daemon=True
+    )
+    t.start()
+
+    return jsonify({'status': 'started', 'app_id': app_id})
+
+
+@app.route('/api/store/manage', methods=['POST'])
+@admin_required
+def api_store_manage():
+    """Manage app: uninstall atau update."""
+    data = request.json or {}
+    app_id = data.get('app_id', '').strip()
+    action = data.get('action', '').strip()
+
+    if not app_id or action not in ('uninstall', 'update', 'stop', 'start', 'restart'):
+        return jsonify({'error': 'Parameter tidak valid'}), 400
+
+    try:
+        client = docker.from_env()
+
+        if action == 'uninstall':
+            # Cari compose_dir
+            catalog = get_store_catalog()
+            app_meta = next((a for a in catalog if a['id'] == app_id), None)
+            if app_meta and os.path.isfile(app_meta['compose_path']):
+                cmd = ['docker', 'compose', '-f', app_meta['compose_path'], 'down', '--remove-orphans']
+                result = subprocess.run(cmd, capture_output=True, text=True, cwd=app_meta['compose_dir'])
+                if result.returncode == 0:
+                    audit_log('STORE_UNINSTALL', f"Uninstalled {app_id}", session.get('username', 'system'))
+                    return jsonify({'success': True})
+                else:
+                    return jsonify({'error': result.stderr or 'Gagal uninstall'}), 500
+            else:
+                # Fallback: coba stop+remove container langsung
+                try:
+                    container = client.containers.get(app_id)
+                    container.stop()
+                    container.remove()
+                    return jsonify({'success': True})
+                except Exception as e2:
+                    return jsonify({'error': str(e2)}), 500
+
+        elif action == 'update':
+            def _do_update():
+                catalog = get_store_catalog()
+                app_meta = next((a for a in catalog if a['id'] == app_id), None)
+                if not app_meta:
+                    socketio.emit('install_log', {'message': f'App {app_id} tidak ditemukan', 'type': 'error', 'app_id': app_id})
+                    socketio.emit('install_complete', {'status': 'error', 'app_id': app_id})
+                    return
+                cmd = ['docker', 'compose', '-f', app_meta['compose_path'], 'pull']
+                subprocess.run(cmd, cwd=app_meta['compose_dir'])
+                _install_catalog_app(app_id, {})
+
+            t = threading.Thread(target=_do_update, daemon=True)
+            t.start()
+            return jsonify({'status': 'update_started', 'app_id': app_id})
+
+        else:
+            # start / stop / restart container langsung
+            try:
+                container = client.containers.get(app_id)
+                if action == 'start':
+                    container.start()
+                elif action == 'stop':
+                    container.stop()
+                elif action == 'restart':
+                    container.restart()
+                audit_log('STORE_MANAGE', f"{action} {app_id}", session.get('username', 'system'))
+                return jsonify({'success': True})
+            except docker.errors.NotFound:
+                return jsonify({'error': f'Container {app_id} tidak ditemukan'}), 404
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/store/add_source', methods=['POST'])
+@admin_required
+def api_store_add_source():
+    """Import tambahan app dari URL ZIP (CasaOS format). Tidak digunakan untuk BigBear yang sudah lokal."""
+    return jsonify({'error': 'Fitur ini tidak diperlukan - BigBear CasaOS sudah tersedia secara lokal di server.', 'added': 0}), 400
+
 
 if __name__ == '__main__':
     print("Starting Development Server on http://localhost:5000")

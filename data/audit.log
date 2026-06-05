@@ -1,0 +1,27 @@
+2026-06-03 13:54:33 | Satya | 127.0.0.1 | TELEGRAM_CONFIG_UPDATED | Telegram config updated
+2026-06-03 13:54:36 | Satya | 127.0.0.1 | SETTINGS_CHANGED | App settings updated
+2026-06-03 13:54:41 | system | 127.0.0.1 | LOGOUT | User Satya logged out
+2026-06-03 13:55:28 | Satya | 127.0.0.1 | LOGIN_SUCCESS | User Satya logged in (role: owner)
+2026-06-03 13:55:35 | Satya | 127.0.0.1 | TELEGRAM_CONFIG_UPDATED | Telegram config updated
+2026-06-03 13:55:35 | Satya | 127.0.0.1 | TELEGRAM_CONFIG_UPDATED | Telegram config updated
+2026-06-03 13:55:41 | Satya | 127.0.0.1 | TELEGRAM_CONFIG_UPDATED | Telegram config updated
+2026-06-03 13:55:44 | Satya | 127.0.0.1 | TELEGRAM_CONFIG_UPDATED | Telegram config updated
+2026-06-03 13:55:46 | Satya | 127.0.0.1 | TELEGRAM_CONFIG_UPDATED | Telegram config updated
+2026-06-03 14:00:03 | Satya | 127.0.0.1 | LOGIN_SUCCESS | User Satya logged in (role: owner)
+2026-06-03 14:02:50 | Satya | 127.0.0.1 | TELEGRAM_CONFIG_UPDATED | Telegram config updated
+2026-06-03 14:02:51 | Satya | 127.0.0.1 | TELEGRAM_CONFIG_UPDATED | Telegram config updated
+2026-06-03 14:03:02 | Satya | 127.0.0.1 | TELEGRAM_CONFIG_UPDATED | Telegram config updated
+2026-06-03 14:03:07 | Satya | 127.0.0.1 | TELEGRAM_CONFIG_UPDATED | Telegram config updated
+2026-06-03 14:03:27 | Satya | 127.0.0.1 | SETTINGS_CHANGED | App settings updated
+2026-06-03 14:03:28 | Satya | 127.0.0.1 | SETTINGS_CHANGED | App settings updated
+2026-06-03 14:10:14 | Satya | 127.0.0.1 | TELEGRAM_CONFIG_UPDATED | Telegram config updated
+2026-06-03 14:10:17 | Satya | 127.0.0.1 | TELEGRAM_CONFIG_UPDATED | Telegram config updated
+2026-06-03 14:17:59 | Satya | 127.0.0.1 | LOGIN_SUCCESS | User Satya logged in (role: owner)
+2026-06-03 14:18:05 | Satya | 127.0.0.1 | TELEGRAM_CONFIG_UPDATED | Telegram config updated
+2026-06-03 14:21:11 | Satya | 127.0.0.1 | TELEGRAM_CONFIG_UPDATED | Telegram config updated
+2026-06-03 14:21:20 | Satya | 127.0.0.1 | TELEGRAM_CONFIG_UPDATED | Telegram config updated
+2026-06-03 14:22:41 | Satya | 127.0.0.1 | TELEGRAM_CONFIG_UPDATED | Telegram config updated
+2026-06-03 14:29:09 | Satya | 127.0.0.1 | TELEGRAM_CONFIG_UPDATED | Telegram config updated
+2026-06-03 14:29:42 | Satya | 127.0.0.1 | TELEGRAM_CONFIG_UPDATED | Telegram config updated
+2026-06-03 14:29:49 | Satya | 127.0.0.1 | TELEGRAM_CONFIG_UPDATED | Telegram config updated
+2026-06-03 14:45:32 | Satya | 127.0.0.1 | LOGIN_SUCCESS | User Satya logged in (role: owner)

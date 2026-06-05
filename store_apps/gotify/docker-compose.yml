@@ -1,0 +1,58 @@
+# Configuration for big-bear-gotify setup
+name: big-bear-gotify
+# Service definitions for the big-bear-gotify application
+services:
+  # Service name: app
+  app:
+    image: gotify/server:2.9.1 # Docker image for the service
+    ports:
+      - 8091:80 # Port mapping (host:container)
+    environment: # Environment variables for the service
+      - GOTIFY_DEFAULTUSER_NAME=admin
+      - GOTIFY_DEFAULTUSER_PASS=custom
+    volumes: # Volume mapping (host:container)
+      - "/DATA/AppData/$AppID/data:/app/data"
+    network_mode: bridge # Network mode
+    x-casaos:
+      envs:
+        - container: GOTIFY_DEFAULTUSER_NAME
+          description:
+            en_us: 'Container Variable: GOTIFY_DEFAULTUSER_NAME'
+        - container: GOTIFY_DEFAULTUSER_PASS
+          description:
+            en_us: 'Container Variable: GOTIFY_DEFAULTUSER_PASS'
+      volumes:
+        - container: /app/data
+          description:
+            en_us: 'Container Path: /app/data'
+      ports:
+        - container: "80"
+          description:
+            en_us: 'Container Port: 80'
+x-casaos:
+  # Supported CPU architectures for this application
+  architectures:
+    - amd64
+  # Main service for this application
+  main: app
+  # Detailed description for the application
+  description:
+    en_us: a simple server for sending and receiving messages
+  # Brief tagline for the application
+  tagline:
+    en_us: Gotify
+  # Developer's information
+  developer: gotify
+  # Author of this particular configuration
+  author: BigBearTechWorld
+  # Icon URL for the application
+  icon: https://cdn.jsdelivr.net/gh/selfhst/icons/png/gotify.png
+  # Thumbnail image for the application (if any)
+  thumbnail: ""
+  # Title for the application
+  title:
+    en_us: Gotify
+  # Category under which the application falls
+  category: BigBearCasaOS
+  # Default port mapping for the application
+  port_map: "8091"

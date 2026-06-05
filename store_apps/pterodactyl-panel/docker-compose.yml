@@ -1,0 +1,207 @@
+# big-bear-pterodactyl-panel configuration
+name: big-bear-pterodactyl-panel
+# Services section that specifies how the different services should be run
+services:
+  # This is the main app service for Pterodactyl Panel
+  app:
+    # Container configuration for the Pterodactyl Panel
+    container_name: pterodactyl-panel
+    # Image to use for the panel
+    image: ghcr.io/pterodactyl/panel:v1.12.2
+    # Restart the container automatically if it stops
+    restart: always
+    # Ports mapping: [HOST:CONTAINER]
+    ports:
+      - "1180:80" # Map host port 1180 to container port 80
+      - "11443:443" # Map host port 11443 to container port 443
+    # Link this container with the 'database' and 'cache' containers
+    links:
+      - database
+      - cache
+    # Volumes mapping: [HOST:CONTAINER]
+    volumes:
+      - "/DATA/AppData/$AppID/var/:/app/var/" # Map app data
+      - "/DATA/AppData/$AppID/nginx/:/etc/nginx/http.d/" # Map nginx config
+      - "/DATA/AppData/$AppID/certs/:/etc/letsencrypt/" # Map SSL certificates
+      - "/DATA/AppData/$AppID/logs/:/app/storage/logs" # Map logs
+    # Environment variables for the container
+    environment:
+      APP_URL: "http://example.com" # App URL
+      APP_TIMEZONE: "UTC" # App timezone
+      APP_SERVICE_AUTHOR: "noreply@example.com" # Service author email
+      # Uncomment to use Let's Encrypt for SSL certificate
+      # LE_EMAIL: ""
+      MAIL_FROM: "noreply@example.com" # Email sender
+      MAIL_DRIVER: "smtp" # Email driver
+      MAIL_HOST: "mail" # Email host
+      MAIL_PORT: "1025" # Email port
+      MAIL_USERNAME: "" # Email username
+      MAIL_PASSWORD: "" # Email password
+      MAIL_ENCRYPTION: "true" # Use email encryption
+      APP_ENV: "production" # App environment
+      APP_ENVIRONMENT_ONLY: "false" # Environment setting
+      CACHE_DRIVER: "redis" # Cache driver
+      SESSION_DRIVER: "redis" # Session driver
+      QUEUE_DRIVER: "redis" # Queue driver
+      REDIS_HOST: "cache" # Redis host
+      DB_HOST: "database" # Database host
+      DB_PASSWORD: casaos # Database password
+      DB_PORT: "3306" # Database port
+      DB_CONNECTION: "mariadb" # Use MariaDB connector to avoid mysql binary requirement (v1.12.0+)
+    x-casaos:
+      envs:
+        - container: APP_URL
+          description:
+            en_us: 'Container Variable: APP_URL'
+        - container: APP_TIMEZONE
+          description:
+            en_us: 'Container Variable: APP_TIMEZONE'
+        - container: APP_SERVICE_AUTHOR
+          description:
+            en_us: 'Container Variable: APP_SERVICE_AUTHOR'
+        - container: MAIL_FROM
+          description:
+            en_us: 'Container Variable: MAIL_FROM'
+        - container: MAIL_DRIVER
+          description:
+            en_us: 'Container Variable: MAIL_DRIVER'
+        - container: MAIL_HOST
+          description:
+            en_us: 'Container Variable: MAIL_HOST'
+        - container: MAIL_PORT
+          description:
+            en_us: 'Container Variable: MAIL_PORT'
+        - container: MAIL_USERNAME
+          description:
+            en_us: 'Container Variable: MAIL_USERNAME'
+        - container: MAIL_PASSWORD
+          description:
+            en_us: 'Container Variable: MAIL_PASSWORD'
+        - container: MAIL_ENCRYPTION
+          description:
+            en_us: 'Container Variable: MAIL_ENCRYPTION'
+        - container: APP_ENV
+          description:
+            en_us: 'Container Variable: APP_ENV'
+        - container: APP_ENVIRONMENT_ONLY
+          description:
+            en_us: 'Container Variable: APP_ENVIRONMENT_ONLY'
+        - container: CACHE_DRIVER
+          description:
+            en_us: 'Container Variable: CACHE_DRIVER'
+        - container: SESSION_DRIVER
+          description:
+            en_us: 'Container Variable: SESSION_DRIVER'
+        - container: QUEUE_DRIVER
+          description:
+            en_us: 'Container Variable: QUEUE_DRIVER'
+        - container: REDIS_HOST
+          description:
+            en_us: 'Container Variable: REDIS_HOST'
+        - container: DB_HOST
+          description:
+            en_us: 'Container Variable: DB_HOST'
+        - container: DB_PASSWORD
+          description:
+            en_us: 'Container Variable: DB_PASSWORD'
+        - container: DB_PORT
+          description:
+            en_us: 'Container Variable: DB_PORT'
+        - container: DB_CONNECTION
+          description:
+            en_us: 'Container Variable: DB_CONNECTION'
+      volumes:
+        - container: /app/var/
+          description:
+            en_us: 'Container Path: /app/var/'
+        - container: /etc/nginx/http.d/
+          description:
+            en_us: 'Container Path: /etc/nginx/http.d/'
+        - container: /etc/letsencrypt/
+          description:
+            en_us: 'Container Path: /etc/letsencrypt/'
+        - container: /app/storage/logs
+          description:
+            en_us: 'Container Path: /app/storage/logs'
+      ports:
+        - container: "80"
+          description:
+            en_us: 'Container Port: 80'
+        - container: "443"
+          description:
+            en_us: 'Container Port: 443'
+  database:
+    # Image to use for the database
+    image: mariadb:10.5
+    # Restart the container automatically if it stops
+    restart: always
+    # Command to run on container start
+    command: --default-authentication-plugin=mysql_native_password
+    # Volumes mapping: [HOST:CONTAINER]
+    volumes:
+      - "/DATA/AppData/$AppID/database:/var/lib/mysql" # Map database data
+    # Environment variables for the container
+    environment:
+      MYSQL_DATABASE: "panel" # Database name
+      MYSQL_USER: "pterodactyl" # Database user
+      MYSQL_PASSWORD: "casaos" # Database user password
+      MYSQL_ROOT_PASSWORD: "casaos" # Database root password
+      # Container configuration for the cache
+    x-casaos:
+      envs:
+        - container: MYSQL_DATABASE
+          description:
+            en_us: 'Container Variable: MYSQL_DATABASE'
+        - container: MYSQL_USER
+          description:
+            en_us: 'Container Variable: MYSQL_USER'
+        - container: MYSQL_PASSWORD
+          description:
+            en_us: 'Container Variable: MYSQL_PASSWORD'
+        - container: MYSQL_ROOT_PASSWORD
+          description:
+            en_us: 'Container Variable: MYSQL_ROOT_PASSWORD'
+      volumes:
+        - container: /var/lib/mysql
+          description:
+            en_us: 'Container Path: /var/lib/mysql'
+  cache:
+    # Image to use for the cache
+    image: redis:8.2.2-alpine@sha256:1c78f5e7512cc8b22b0edc95c20e7abd9e1fd832e5dfd5c3c6b59ce82fb238d0
+    # Restart the container automatically if it stops
+    restart: always
+x-casaos:
+  # Supported CPU architectures for this application
+  architectures:
+    - amd64
+    - arm64
+  # Main service for this application
+  main: app
+  # Detailed description for the application
+  description:
+    en_us: Pterodactyl® is a free, open-source game server management panel built with PHP, React, and Go. Designed with security in mind, Pterodactyl runs all game servers in isolated Docker containers while exposing a beautiful and intuitive UI to end users.
+  # Brief tagline for the application
+  tagline:
+    en_us: Pterodactyl Panel
+  # Developer's information
+  developer: pterodactyl
+  # Author of this particular configuration
+  author: BigBearTechWorld
+  # Icon URL for the application
+  icon: https://cdn.jsdelivr.net/gh/selfhst/icons/png/pterodactyl.png
+  # Thumbnail image for the application (if any)
+  thumbnail: ""
+  # Installation tips
+  tips:
+    before_install:
+      en_us: |
+        Before you can use Pterodactyl Panel, you need to read the installation guide.
+
+        [Install Guide Link](https://github.com/bigbeartechworld/big-bear-casaos/tree/master/Apps/pterodactyl-panel)
+  # Title for the application
+  title:
+    en_us: Pterodactyl Panel
+  # Category under which the application falls
+  category: BigBearCasaOS
+  # Default port mapping for the application
+  port_map: "1180"

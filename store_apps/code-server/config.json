@@ -1,0 +1,7 @@
+{
+  "id": "code-server",
+  "version": "4.122.0",
+  "image": "linuxserver/code-server",
+  "youtube": "https://youtu.be/aiYcwXDfgE8",
+  "docs_link": ""
+}

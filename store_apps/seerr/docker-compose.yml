@@ -1,0 +1,65 @@
+name: big-bear-seerr # Name of the compose project
+services:
+  app:
+    image: seerr/seerr:v3.2.0 # Image to use for the seerr service
+    init: true # Enable init process
+    container_name: big-bear-seerr
+    ports:
+      - "5056:5055" # Maps port 5056 on the host to port 5055 on the container
+    volumes:
+      - /DATA/AppData/$AppID/config:/app/config # Binds a volume from host to container for configuration
+    environment:
+      - LOG_LEVEL=debug # Sets the log level to debug
+      - TZ=$TZ # Sets the timezone, using host's timezone variable
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:5055/api/v1/settings/public || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped # Service will restart unless it is explicitly stopped
+    network_mode: bridge # Uses bridge network mode
+    x-casaos:
+      envs:
+        - container: LOG_LEVEL
+          description:
+            en_us: 'Container Variable: LOG_LEVEL'
+        - container: TZ
+          description:
+            en_us: 'Container Variable: TZ'
+      volumes:
+        - container: /app/config
+          description:
+            en_us: 'Container Path: /app/config'
+      ports:
+        - container: "5055"
+          description:
+            en_us: 'Container Port: 5055'
+x-casaos:
+  # Supported CPU architectures for this application
+  architectures:
+    - amd64
+    - arm64
+  # Main service for this application
+  main: app
+  # Detailed description for the application
+  description:
+    en_us: Seerr is a free and open source software application for managing requests for your media library. It is the successor to Overseerr and Jellyseerr, bringing support for Jellyfin, Plex, and Emby media servers.
+  # Brief tagline for the application
+  tagline:
+    en_us: Media request management for Jellyfin, Plex, and Emby
+  # Developer's information
+  developer: Seerr Team
+  # Author of this particular configuration
+  author: BigBearCommunity
+  # Icon URL for the application
+  icon: https://cdn.jsdelivr.net/gh/selfhst/icons/png/seerr.png
+  # Thumbnail image for the application (if any)
+  thumbnail: ""
+  # Title for the application
+  title:
+    en_us: Seerr
+  # Category under which the application falls
+  category: BigBearCasaOS
+  # Default port mapping for the application
+  port_map: "5056"
