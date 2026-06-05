@@ -5234,6 +5234,54 @@ def update_app_config():
         print(f"Update failed: {e}")
         return jsonify({'error': str(e)}), 500
 
+# ─── CONTAINER CUSTOM ICON ─────────────────────────────────────────────────
+CONTAINER_ICONS_DIR = os.path.join(DATA_DIR, 'container_icons')
+if not os.path.exists(CONTAINER_ICONS_DIR):
+    os.makedirs(CONTAINER_ICONS_DIR)
+
+@app.route('/api/apps/icon/<container_name>', methods=['POST'])
+@login_required
+@requires_permission('docker', 'full')
+def upload_container_icon(container_name):
+    """Upload a custom icon image for a Docker container."""
+    try:
+        if 'icon' not in request.files:
+            return jsonify({'error': 'No file uploaded'}), 400
+
+        file = request.files['icon']
+        if file.filename == '':
+            return jsonify({'error': 'Empty filename'}), 400
+
+        # Validate extension
+        allowed_ext = {'.png', '.jpg', '.jpeg', '.svg', '.webp', '.gif', '.ico'}
+        ext = os.path.splitext(file.filename)[1].lower()
+        if ext not in allowed_ext:
+            return jsonify({'error': f'File type not allowed. Use: {", ".join(allowed_ext)}'}), 400
+
+        # Sanitize container_name to prevent path traversal
+        safe_name = container_name.replace('/', '_').replace('\\', '_').replace('..', '_')
+
+        # Remove old icon if exists (different extension)
+        for old_file in os.listdir(CONTAINER_ICONS_DIR):
+            if old_file.startswith(safe_name + '.'):
+                os.remove(os.path.join(CONTAINER_ICONS_DIR, old_file))
+
+        save_path = os.path.join(CONTAINER_ICONS_DIR, f"{safe_name}{ext}")
+        file.save(save_path)
+        return jsonify({'success': True, 'icon_url': f'/api/apps/icon/{container_name}'})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/apps/icon/<container_name>', methods=['GET'])
+def get_container_icon(container_name):
+    """Serve a custom container icon, or 404 if none set."""
+    safe_name = container_name.replace('/', '_').replace('\\', '_').replace('..', '_')
+    for f in os.listdir(CONTAINER_ICONS_DIR):
+        if f.startswith(safe_name + '.'):
+            return send_file(os.path.join(CONTAINER_ICONS_DIR, f))
+    return '', 404
+
 
 @app.route('/api/store/manage', methods=['POST'])
 @login_required
