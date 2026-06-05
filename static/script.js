@@ -643,9 +643,6 @@ function renderDashboardApps(apps) {
                 <div class="option-item" onclick="editDockerPort('${dockerTarget}')">
                     <i class="fa-solid fa-pen-to-square"></i> Edit Port
                 </div>
-                <div class="option-item" onclick="editDockerImage('${dockerTarget}')">
-                    <i class="fa-solid fa-image"></i> Edit Image
-                </div>
                 <div class="option-item text-danger" onclick="uninstallDockerApp('${dockerTarget}')">
                     <i class="fa-solid fa-trash"></i> Uninstall
                 </div>
@@ -1029,11 +1026,6 @@ function showToast(message, type = 'success') {
         toast.style.opacity = '0';
         setTimeout(() => toast.remove(), 400);
     }, 1500);
-}
-
-function editDockerImage(containerName) {
-    // Placeholder function for the user to implement the backend logic later
-    alert("Backend functionality for editing image will be implemented here.");
 }
 
 async function saveDashboardDockerPorts() {
