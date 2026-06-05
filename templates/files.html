@@ -413,6 +413,15 @@
             font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 0.95rem; padding: 1.5rem;
             resize: none; outline: none; box-sizing: border-box; line-height: 1.6;
         }
+
+        /* Prevent fm-container glass hover effect */
+        body .fm-container.glass:hover {
+            transform: none !important;
+            box-shadow: var(--shadow) !important;
+            cursor: default !important;
+            background: var(--glass-bg) !important;
+            border-color: var(--glass-border) !important;
+        }
     </style>
     <script src="{{ url_for('static', filename='theme.js') }}"></script>
 </head>
