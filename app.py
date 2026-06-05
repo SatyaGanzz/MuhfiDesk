@@ -850,6 +850,30 @@ def stats():
         except Exception:
             pass
 
+    # Fallback: read directly from sysfs (works in Docker if host path is mounted)
+    if cpu_temp == 0:
+        import glob
+        thermal_paths = [
+            '/sys/class/thermal/thermal_zone*/temp',
+            '/sys/devices/virtual/thermal/thermal_zone*/temp',
+            '/sys/class/hwmon/hwmon*/temp*_input',
+        ]
+        for pattern in thermal_paths:
+            try:
+                for path in sorted(glob.glob(pattern)):
+                    with open(path, 'r') as f:
+                        val = int(f.read().strip())
+                        # Values > 1000 are in millidegrees
+                        if val > 1000:
+                            val = val / 1000.0
+                        if 1 < val < 150:  # sanity check
+                            cpu_temp = round(val, 1)
+                            break
+                if cpu_temp > 0:
+                    break
+            except Exception:
+                continue
+
     return jsonify({
         "cpu": {
             "percent": cpu_percent,
@@ -917,6 +941,29 @@ def metrics_api():
         except Exception:
             pass
     
+    # Fallback: read directly from sysfs (works in Docker if host path is mounted)
+    if cpu_temp == 0:
+        import glob
+        thermal_paths = [
+            '/sys/class/thermal/thermal_zone*/temp',
+            '/sys/devices/virtual/thermal/thermal_zone*/temp',
+            '/sys/class/hwmon/hwmon*/temp*_input',
+        ]
+        for pattern in thermal_paths:
+            try:
+                for path in sorted(glob.glob(pattern)):
+                    with open(path, 'r') as f:
+                        val = int(f.read().strip())
+                        if val > 1000:
+                            val = val / 1000.0
+                        if 1 < val < 150:
+                            cpu_temp = round(val, 1)
+                            break
+                if cpu_temp > 0:
+                    break
+            except Exception:
+                continue
+
     # Memory
     svmem = psutil.virtual_memory()
     swap = psutil.swap_memory()
