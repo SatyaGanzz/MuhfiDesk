@@ -476,15 +476,8 @@
                         class="fa-solid fa-file-alt"></i> syslog</button>
             </div>
 
-            <!-- ESP32 -->
+            <!-- Update -->
             <div class="cmd-category">
-                <span class="cmd-category-label system" style="background:rgba(255, 107, 107, 0.15); color:#ff6b6b">
-                    <i class="fa-solid fa-microchip"></i> ESP32
-                </span>
-                <button class="quick-btn system" style="border-color: rgba(255, 107, 107, 0.3); color: #ff9f9f"
-                    onclick="quickCmd('export TERM=xterm && screen /dev/ttyACM1 115200')">
-                    <i class="fa-solid fa-bolt"></i> CONNECT SERIAL
-                </button>
                 <button class="quick-btn" style="border-color: rgba(162, 155, 254, 0.3); color: #a29bfe"
                     onclick="quickCmd('sudo muhfidesk update')">
                     <img src="{{ url_for('static', filename='favicon.svg') }}" style="width: 14px; height: 14px; margin-right: 4px;"> UPDATE MUHFIDESK
