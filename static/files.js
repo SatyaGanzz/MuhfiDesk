@@ -342,7 +342,24 @@ function renderTable(items, isNew) {
         let iconClass = item.is_dir ? 'fa-folder dir' : 'fa-file file';
         let iconColor = item.is_dir ? '#FF9966' : '#a0a0b0';
         
-        if (!item.is_dir) {
+        if (item.is_dir) {
+            const lowerName = item.name.toLowerCase();
+            if (['etc', 'conf', 'config'].includes(lowerName)) { iconColor = '#a29bfe'; }
+            else if (['bin', 'usr', 'lib', 'lib64', 'opt'].includes(lowerName)) { iconColor = '#74b9ff'; }
+            else if (['var', 'tmp', 'cache', 'temp'].includes(lowerName)) { iconColor = '#ffeaa7'; }
+            else if (['log', 'logs'].includes(lowerName)) { iconColor = '#81ecec'; }
+            else if (['home', 'user', 'users', 'root'].includes(lowerName)) { iconColor = '#55efc4'; }
+            else if (['src', 'www', 'public', 'app', 'html'].includes(lowerName)) { iconColor = '#ff7675'; }
+            else if (['mnt', 'media', 'drives'].includes(lowerName)) { iconColor = '#fd79a8'; }
+            else if (['boot', 'sys', 'dev'].includes(lowerName)) { iconColor = '#b2bec3'; }
+            else if (['node_modules', 'vendor', '.git'].includes(lowerName)) { iconColor = '#636e72'; }
+            else {
+                const colors = ['#FF9966', '#58a6ff', '#3fb950', '#f1e05a', '#a371f7', '#e34c26', '#f9826c', '#79c0ff', '#e056fd', '#f39c12', '#00cec9', '#fdcb6e'];
+                let hash = 0;
+                for (let i = 0; i < item.name.length; i++) hash = item.name.charCodeAt(i) + ((hash << 5) - hash);
+                iconColor = colors[Math.abs(hash) % colors.length];
+            }
+        } else {
             const extMatch = item.name.match(/\.([^.]+)$/);
             const ext = extMatch ? extMatch[1].toLowerCase() : '';
             
