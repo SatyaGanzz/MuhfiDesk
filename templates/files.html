@@ -388,6 +388,31 @@
             color: #FF9966;
             margin-bottom: 1rem;
         }
+
+        /* Editor Modal */
+        .editor-modal {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem;
+        }
+        .editor-header {
+            background: var(--bg-elevated, #1c2128); width: 100%; max-width: 1000px; padding: 1rem 1.5rem;
+            border-radius: 12px 12px 0 0; border: 1px solid var(--glass-border, rgba(255,255,255,0.15)); border-bottom: none;
+            display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;
+        }
+        .editor-header h3 {
+            margin: 0; font-weight: 500; color: #fff; font-size: 1.1rem;
+        }
+        .editor-body {
+            background: var(--bg-base, #0d1117); width: 100%; max-width: 1000px; height: 75vh;
+            border-radius: 0 0 12px 12px; border: 1px solid var(--glass-border, rgba(255,255,255,0.15));
+            display: flex; box-sizing: border-box; overflow: hidden;
+        }
+        #editor-textarea {
+            width: 100%; height: 100%; background: transparent; border: none; color: #e6edf3;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 0.95rem; padding: 1.5rem;
+            resize: none; outline: none; box-sizing: border-box; line-height: 1.6;
+        }
     </style>
     <script src="{{ url_for('static', filename='theme.js') }}"></script>
 </head>
