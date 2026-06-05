@@ -653,7 +653,7 @@ function renderDashboardApps(apps) {
         ` : '';
 
         return `
-        <div class="app-item" draggable="true" data-id="${app.id}" onclick="handleAppClick(event, '${app.url}')">
+        <div class="app-item glass" draggable="true" data-id="${app.id}" onclick="handleAppClick(event, '${app.url}')">
             ${optionsMenu}
             <div class="app-icon ${app.type === 'docker' ? 'app-icon-docker' : ''}" style="--app-color: ${app.color};">
                 ${app.icon.startsWith('http') ? `<img src="${app.icon}" style="width:${app.type === 'docker' ? '100%' : '32px'};height:${app.type === 'docker' ? '100%' : '32px'};" onerror="this.src='/static/favicon.svg'">` : app.icon.startsWith('/') ? `<img src="${app.icon}" style="width:32px;height:32px;filter:brightness(0) invert(1)">` : `<i class="${app.icon.startsWith('fa') ? app.icon : 'fa-solid fa-' + app.icon}"></i>`}
