@@ -5193,8 +5193,9 @@ def install_worker(app_id, config, username):
             if config.get('ports') and len(config.get('ports')) > 0:
                 first_port = config.get('ports')[0].get('host')
             
-            # Get icon URL
-            icon_url = get_app_icon_url(app_id if app_id != 'custom' else name, image)
+            # Get icon URL - prioritize catalog icon, fallback to image-based icon
+            catalog_icon = found.get('icon') if found else None
+            icon_url = catalog_icon or get_app_icon_url(app_id if app_id != 'custom' else name, image)
             
             # Prepare app metadata
             app_metadata = {
@@ -5602,6 +5603,8 @@ def get_dashboard_apps():
             except: pass
             
         catalog_meta = {app.get('name', '').lower(): app for app in catalog}
+        # Also index catalog by app id for direct lookup
+        catalog_by_id = {app.get('id', '').lower(): app for app in catalog}
 
         # Get current Docker container status
         client = docker.from_env()
@@ -5628,10 +5631,18 @@ def get_dashboard_apps():
             # Ambil metadata (nama, icon)
             meta = installed_meta.get(container_name, {})
             
-            # Coba tebak dari catalog jika ga ada di installed_meta
+            # Coba cari di catalog berdasarkan container_name atau clean name
             clean_name = container_name.replace('muhfi_', '')
-            if not meta and clean_name.lower() in catalog_meta:
-                meta = catalog_meta[clean_name.lower()]
+            catalog_entry = None
+            # 1. Cari di catalog berdasarkan id (exact match)
+            if clean_name.lower() in catalog_by_id:
+                catalog_entry = catalog_by_id[clean_name.lower()]
+            # 2. Cari berdasarkan nama (lowercase)
+            elif clean_name.lower() in catalog_meta:
+                catalog_entry = catalog_meta[clean_name.lower()]
+            
+            if not meta and catalog_entry:
+                meta = catalog_entry
                 
             # Build URL
             url = "#"
@@ -5650,9 +5661,12 @@ def get_dashboard_apps():
                 icon_name = 'portainer'
             dynamic_icon = f"https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/{icon_name}.svg"
             
-            # Fallback nama dan icon
+            # Priority: installed_meta icon > catalog icon > dynamic icon from image name
             display_name = meta.get('name', container_name).replace('-', ' ')
-            icon_url = meta.get('icon', dynamic_icon)
+            # Check if installed_meta has a real icon (not just the dynamic fallback)
+            installed_icon = installed_meta.get(container_name, {}).get('icon', '')
+            catalog_icon = catalog_entry.get('icon', '') if catalog_entry else ''
+            icon_url = installed_icon or catalog_icon or meta.get('icon', dynamic_icon)
             
             # Create dashboard item
             dashboard_item = {
@@ -5690,6 +5704,57 @@ def get_dashboard_apps():
         print("Layout load error:", e)
 
     return jsonify({"items": all_items})
+
+@app.route('/api/dashboard/sync-icons', methods=['POST'])
+@login_required
+def sync_dashboard_icons():
+    """Sync icons for already installed apps from catalog"""
+    try:
+        installed_apps = load_installed_apps()
+        if not installed_apps:
+            return jsonify({'success': True, 'message': 'No installed apps to sync', 'updated': 0})
+        
+        # Load catalog
+        catalog = []
+        if os.path.exists(CATALOG_FILE):
+            with open(CATALOG_FILE, 'r') as f: catalog.extend(json.load(f))
+        if os.path.exists(USER_CATALOG_FILE):
+            try:
+                with open(USER_CATALOG_FILE, 'r') as f: catalog.extend(json.load(f))
+            except: pass
+        
+        catalog_by_id = {app.get('id', '').lower(): app for app in catalog}
+        catalog_by_name = {app.get('name', '').lower(): app for app in catalog}
+        
+        updated = 0
+        for app in installed_apps:
+            app_id = (app.get('id') or '').lower().replace('docker_', '')
+            container_name = (app.get('container_name') or '').replace('muhfi_', '').lower()
+            
+            # Find catalog entry by id or container_name
+            catalog_entry = (
+                catalog_by_id.get(app_id) or
+                catalog_by_id.get(container_name) or
+                catalog_by_name.get(container_name)
+            )
+            
+            if catalog_entry and catalog_entry.get('icon'):
+                new_icon = catalog_entry['icon']
+                if app.get('icon') != new_icon:
+                    app['icon'] = new_icon
+                    if not app.get('name') and catalog_entry.get('name'):
+                        app['name'] = catalog_entry['name']
+                    updated += 1
+        
+        if updated > 0:
+            with open(INSTALLED_APPS_FILE, 'w') as f:
+                json.dump(installed_apps, f, indent=4)
+        
+        return jsonify({'success': True, 'message': f'Synced icons for {updated} apps', 'updated': updated})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/dashboard/layout', methods=['POST'])
 @login_required 

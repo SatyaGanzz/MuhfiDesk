@@ -787,7 +787,19 @@ async function updateWebMonitor() {
 
 // Add init logic
 document.addEventListener('DOMContentLoaded', () => {
-    loadDashboardApps();
+    // Auto-sync icons from catalog for already installed apps (fixes missing/wrong icons)
+    fetch('/api/dashboard/sync-icons', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.updated > 0) {
+                console.log(`[Dashboard] Synced icons for ${data.updated} apps from catalog`);
+            }
+        })
+        .catch(() => {})
+        .finally(() => {
+            loadDashboardApps();
+        });
+
     updateWebMonitor();
     setInterval(updateWebMonitor, 10000); // Polling every 10s
 
