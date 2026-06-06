@@ -5366,18 +5366,55 @@ def app_action():
         elif action == 'stop': container.stop()
         elif action == 'restart': container.restart()
         elif action == 'uninstall': 
-            container.remove(force=True)
-            # Remove from installed_apps.json
+            container_name = container.name
+            image_name = None
             try:
-                remove_installed_app(container.name)
-                print(f"DEBUG: Removed {container.name} from installed_apps.json")
+                image_name = container.image.tags[0] if container.image.tags else container.attrs.get('Config', {}).get('Image')
+            except: pass
+            
+            # 1. Try docker-compose down first (handles volumes in compose stacks)
+            app_dir_host = f"/opt/muhfi/apps/{container_name}"
+            app_dir_internal = os.path.join('/host/root', app_dir_host.lstrip('/'))
+            compose_file = os.path.join(app_dir_internal, 'docker-compose.yml')
+            if os.path.exists(compose_file):
+                try:
+                    subprocess.run(['docker', 'compose', 'down', '--remove-orphans'], cwd=app_dir_internal, timeout=30)
+                except: pass
+            
+            # 2. Force remove container (in case compose down didn't get it)
+            try:
+                container.remove(force=True)
+            except: pass
+
+            # 3. Delete app data folder
+            if os.path.exists(app_dir_internal):
+                try:
+                    import shutil
+                    shutil.rmtree(app_dir_internal)
+                    print(f"DEBUG: Deleted app data folder {app_dir_internal}")
+                except Exception as e:
+                    print(f"WARNING: Failed to delete app data folder: {e}")
+
+            # 4. Remove Docker image to free disk space
+            if image_name:
+                try:
+                    client.images.remove(image_name, force=True)
+                    print(f"DEBUG: Removed Docker image {image_name}")
+                except Exception as e:
+                    print(f"INFO: Could not remove image {image_name}: {e}")
+
+            # 5. Remove from installed_apps.json
+            try:
+                remove_installed_app(container_name)
+                print(f"DEBUG: Removed {container_name} from installed_apps.json")
             except Exception as e:
                 print(f"WARNING: Failed to remove from installed_apps.json: {e}")
-            # Remove from user_catalog if exists
+
+            # 6. Remove from user_catalog if exists
             if os.path.exists(USER_CATALOG_FILE):
                  try:
                      with open(USER_CATALOG_FILE) as f: user_apps = json.load(f)
-                     user_apps = [a for a in user_apps if a.get('id') not in (app_id, container.name)] # Filter out
+                     user_apps = [a for a in user_apps if a.get('id') not in (app_id, container_name)]
                      with open(USER_CATALOG_FILE, 'w') as f: json.dump(user_apps, f, indent=4)
                  except: pass
 
@@ -5510,17 +5547,52 @@ def manage_app_endpoint():
             else:
                 container.restart()
         elif action == 'uninstall':
-            container.remove(force=True)
-            # Remove from user_apps.json if there
+            container_name2 = container.name
+            image_name2 = None
+            try:
+                image_name2 = container.image.tags[0] if container.image.tags else container.attrs.get('Config', {}).get('Image')
+            except: pass
+
+            # 1. Try docker-compose down first
+            app_dir_host2 = f"/opt/muhfi/apps/{container_name2}"
+            app_dir_internal2 = os.path.join('/host/root', app_dir_host2.lstrip('/'))
+            compose_file2 = os.path.join(app_dir_internal2, 'docker-compose.yml')
+            if os.path.exists(compose_file2):
+                try:
+                    subprocess.run(['docker', 'compose', 'down', '--remove-orphans'], cwd=app_dir_internal2, timeout=30)
+                except: pass
+
+            # 2. Force remove container
+            try:
+                container.remove(force=True)
+            except: pass
+
+            # 3. Delete app data folder
+            if os.path.exists(app_dir_internal2):
+                try:
+                    import shutil
+                    shutil.rmtree(app_dir_internal2)
+                    print(f"DEBUG: Deleted app data folder {app_dir_internal2}")
+                except Exception as e:
+                    print(f"WARNING: Failed to delete folder: {e}")
+
+            # 4. Remove Docker image
+            if image_name2:
+                try:
+                    client.images.remove(image_name2, force=True)
+                except Exception as e:
+                    print(f"INFO: Could not remove image {image_name2}: {e}")
+
+            # 5. Remove from installed_apps.json
+            remove_installed_app(container_name2)
+            
+            # 6. Remove from user_apps.json if there
             if os.path.exists(USER_CATALOG_FILE):
                 try:
                     with open(USER_CATALOG_FILE, 'r') as f: apps = json.load(f)
-                    apps = [a for a in apps if a.get('id') not in (app_id, container_name) and a.get('name') not in (app_id, container_name)]
+                    apps = [a for a in apps if a.get('id') not in (app_id, container_name2) and a.get('name') not in (app_id, container_name2)]
                     with open(USER_CATALOG_FILE, 'w') as f: json.dump(apps, f, indent=4)
                 except: pass
-            
-            # Remove from installed_apps.json
-            remove_installed_app(container_name)
             
         audit_log('APP_MANAGE', f"{action.title()} app {app_id}", session.get('username'))
         return jsonify({'success': True})
@@ -5957,15 +6029,49 @@ def manage_app():
         container_name = container.name
         
         if action == 'uninstall':
-            container.remove(force=True)
-            
-            # Remove from installed_apps.json
+            container_name3 = container.name
+            image_name3 = None
             try:
-                remove_installed_app(container_name)
+                image_name3 = container.image.tags[0] if container.image.tags else container.attrs.get('Config', {}).get('Image')
+            except: pass
+
+            # 1. Try docker-compose down first
+            app_dir_host3 = f"/opt/muhfi/apps/{container_name3}"
+            app_dir_internal3 = os.path.join('/host/root', app_dir_host3.lstrip('/'))
+            compose_file3 = os.path.join(app_dir_internal3, 'docker-compose.yml')
+            if os.path.exists(compose_file3):
+                try:
+                    subprocess.run(['docker', 'compose', 'down', '--remove-orphans'], cwd=app_dir_internal3, timeout=30)
+                except: pass
+
+            # 2. Force remove container
+            try:
+                container.remove(force=True)
+            except: pass
+
+            # 3. Delete app data folder
+            if os.path.exists(app_dir_internal3):
+                try:
+                    import shutil
+                    shutil.rmtree(app_dir_internal3)
+                    print(f"DEBUG: Deleted app data folder {app_dir_internal3}")
+                except Exception as e:
+                    print(f"WARNING: Failed to delete folder: {e}")
+
+            # 4. Remove Docker image
+            if image_name3:
+                try:
+                    client.images.remove(image_name3, force=True)
+                except Exception as e:
+                    print(f"INFO: Could not remove image {image_name3}: {e}")
+
+            # 5. Remove from installed_apps.json
+            try:
+                remove_installed_app(container_name3)
             except Exception as e:
                 print(f"Failed to remove from installed apps: {e}")
                 
-            msg = f"{container_name} uninstalled"
+            msg = f"{container_name3} uninstalled and all data deleted"
             
         elif action == 'start':
             container.start()

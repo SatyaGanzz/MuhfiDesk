@@ -1152,7 +1152,7 @@ async function uninstallDockerApp(appId) {
         
         const data = await response.json();
         if (response.ok) {
-            showToast('Aplikasi ' + appId + ' berhasil dihapus secara permanen.', 'success');
+            showToast('Aplikasi ' + appId + ' berhasil diuninstall — container, image, dan data folder sudah dihapus.', 'success');
             loadDashboardApps(); // Refresh the dashboard
             if (typeof refreshDockerStatus === 'function') refreshDockerStatus();
         } else {
