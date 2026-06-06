@@ -186,7 +186,7 @@ function updateStats() {
 
             // Disk
             if (data.disk) {
-                updateGauge('disk', data.disk.percent, `Used: ${data.disk.used} GB`);
+                updateGauge('disk', data.disk.percent, `Left: ${data.disk.free} free`);
             }
 
             // Network Speed
