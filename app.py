@@ -1747,8 +1747,8 @@ def handle_start_terminal(data):
         if lxd_target:
             cmd = ['nsenter', '-t', '1', '-m', '-u', '-n', '-i', 'lxc', 'exec', lxd_target, '--', 'bash', '--login', '-i']
         else:
-            # Perintah ini akan membersihkan layar, menjalankan neofetch, lalu masuk ke bash interaktif
-            cmd = ['nsenter', '-t', '1', '-m', '-u', '-n', '-i', 'bash', '--login', '-c', 'clear && neofetch && exec bash -i']
+            # Perintah ini akan membersihkan layar, menjalankan fastfetch, lalu masuk ke bash interaktif
+            cmd = ['nsenter', '-t', '1', '-m', '-u', '-n', '-i', 'bash', '--login', '-c', 'clear && fastfetch && exec bash -i']
             
         os.execvp('nsenter', cmd)
     else:

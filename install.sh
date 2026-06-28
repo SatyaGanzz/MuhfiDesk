@@ -21,20 +21,20 @@ echo "🚀 Starting MuhfiDesk Installation..."
 echo "📦 Installing system dependencies..."
 if [ -x "$(command -v apt-get)" ]; then
     apt-get update -y
-    apt-get install -y python3 python3-pip python3-venv git curl neofetch
+    apt-get install -y python3 python3-pip python3-venv git curl fastfetch
 elif [ -x "$(command -v dnf)" ]; then
-    dnf install -y python3 python3-pip git curl neofetch
+    dnf install -y python3 python3-pip git curl fastfetch
 elif [ -x "$(command -v pacman)" ]; then
-    pacman -Sy --noconfirm python python-pip git curl neofetch
+    pacman -Sy --noconfirm python python-pip git curl fastfetch
 else
-    echo "⚠️ Unsupported package manager. Please install python3, pip, git, and neofetch manually."
+    echo "⚠️ Unsupported package manager. Please install python3, pip, git, and fastfetch manually."
 fi
 
-if ! command -v neofetch >/dev/null 2>&1; then
+if ! command -v fastfetch >/dev/null 2>&1; then
     echo "==========================================================="
-    echo "⚠️  NEOFETCH TIDAK DITEMUKAN!"
-    echo "Aplikasi ini merekomendasikan neofetch untuk menampilkan info sistem."
-    echo "Silakan install manual, misalnya: sudo apt install neofetch"
+    echo "⚠️  FASTFETCH TIDAK DITEMUKAN!"
+    echo "Aplikasi ini merekomendasikan fastfetch untuk menampilkan info sistem."
+    echo "Silakan install manual, misalnya: sudo apt install fastfetch"
     echo "==========================================================="
     sleep 3
 fi
