@@ -792,7 +792,7 @@ function openInTerminal() {
 // Upload Files — with progress tracking via XHR
 let activeUploadXHR = null;
 
-function uploadFiles(files) {
+async function uploadFiles(files) {
     if (!files || files.length === 0) return;
 
     // Guard: must be inside a real folder
