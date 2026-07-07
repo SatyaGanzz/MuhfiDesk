@@ -114,7 +114,7 @@ HOME_DEVICES_STATE = {}
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(24).hex())
 app.config['UPLOAD_FOLDER'] = DATA_DIR
-app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB Limit
+app.config['MAX_CONTENT_LENGTH'] = None  # No upload size limit — disk space is the only constraint
 
 # ==============================================
 CORS(app, supports_credentials=True)
@@ -6297,10 +6297,15 @@ except ImportError:
         import re
         return re.sub(r'[^\w\s.-]', '', filename).strip()
 
+
+@app.errorhandler(413)
+def request_entity_too_large(e):
+    return jsonify({'error': 'File is too large'}), 413
+
 @app.route('/api/files/upload', methods=['POST'])
 @login_required
 def files_upload_endpoint():
-    """Upload file(s) to server"""
+    """Upload file(s) to server — streams to disk in chunks to handle large files."""
     if session.get('role') not in ['owner', 'admin']:
         return jsonify({'error': 'Access denied'}), 403
 
@@ -6317,11 +6322,25 @@ def files_upload_endpoint():
         if not os.path.isdir(dest_path):
             return jsonify({'error': 'Destination is not a directory'}), 400
 
+        # Check available disk space before uploading
+        try:
+            disk_usage = psutil.disk_usage(dest_path)
+            content_length = request.content_length
+            if content_length and content_length > disk_usage.free:
+                free_gb = disk_usage.free / (1024**3)
+                need_gb = content_length / (1024**3)
+                return jsonify({
+                    'error': f'Not enough disk space. Need {need_gb:.1f} GB but only {free_gb:.1f} GB free'
+                }), 507
+        except Exception:
+            pass  # Continue anyway if we can't check disk space
+
         if 'file' not in request.files:
             return jsonify({'error': 'No files provided'}), 400
 
         uploaded = []
         files = request.files.getlist('file')
+        CHUNK_SIZE = 8 * 1024 * 1024  # 8MB chunks for streaming write
 
         for f in files:
             if not f.filename:
@@ -6342,7 +6361,23 @@ def files_upload_endpoint():
                 save_path = os.path.join(dest_path, f"{name}_{counter}{ext}")
                 counter += 1
 
-            f.save(save_path)
+            # Stream to disk in chunks to avoid loading entire file into RAM
+            try:
+                with open(save_path, 'wb') as out:
+                    while True:
+                        chunk = f.stream.read(CHUNK_SIZE)
+                        if not chunk:
+                            break
+                        out.write(chunk)
+            except IOError as io_err:
+                # Clean up partial file on write failure
+                if os.path.exists(save_path):
+                    try:
+                        os.remove(save_path)
+                    except Exception:
+                        pass
+                return jsonify({'error': f'Disk write error: {io_err}'}), 500
+
             uploaded.append(os.path.basename(save_path))
 
         if not uploaded:

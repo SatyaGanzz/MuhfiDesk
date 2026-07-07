@@ -830,6 +830,14 @@ function uploadFiles(files) {
     xhr.addEventListener('load', () => {
         activeUploadXHR = null;
         try {
+            // Handle 413 specifically (may return HTML instead of JSON)
+            if (xhr.status === 413) {
+                const errMsg = '413 Request Entity Too Large: The file exceeds the server limit.';
+                completeUploadProgress(false, errMsg);
+                document.getElementById('status-text').textContent = 'Upload failed — file too large';
+                return;
+            }
+
             const data = JSON.parse(xhr.responseText);
             if (xhr.status >= 200 && xhr.status < 300 && data.success) {
                 completeUploadProgress(true, `Uploaded: ${data.files.join(', ')}`);
@@ -841,7 +849,11 @@ function uploadFiles(files) {
                 document.getElementById('status-text').textContent = 'Upload failed';
             }
         } catch (e) {
-            completeUploadProgress(false, 'Invalid server response');
+            // If response isn't JSON, show the HTTP status
+            const errMsg = xhr.status >= 400
+                ? `Server error (${xhr.status}): ${xhr.statusText}`
+                : 'Invalid server response';
+            completeUploadProgress(false, errMsg);
             document.getElementById('status-text').textContent = 'Upload failed';
         }
     });
