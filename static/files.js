@@ -1,5 +1,6 @@
 let currentPath = 'drives://';
 let selectedItem = null;
+let selectedItems = [];
 let clipboard = null;
 let currentPage = 1;
 let hasMore = false;
@@ -216,6 +217,7 @@ function loadFiles(path, page = 1) {
         document.getElementById('status-text').textContent = 'Loading...';
         currentPage = 1;
         selectedItem = null;
+        selectedItems = [];
     }
 
     isLoading = true;
@@ -398,27 +400,77 @@ function renderTable(items, isNew) {
 }
 
 function selectRow(tr, item, e) {
-    document.querySelectorAll('.fm-table tr, .grid-item').forEach(r => r.classList.remove('selected'));
-    tr.classList.add('selected');
-    const index = Array.from(tr.parentNode.children).indexOf(tr);
-    const grid = document.getElementById('file-grid');
-    if (grid && grid.children[index]) {
-        grid.children[index].classList.add('selected');
+    if (e && (e.ctrlKey || e.metaKey)) {
+        const idx = selectedItems.findIndex(i => i.path === item.path);
+        const index = Array.from(tr.parentNode.children).indexOf(tr);
+        const grid = document.getElementById('file-grid');
+        if (idx > -1) {
+            selectedItems.splice(idx, 1);
+            tr.classList.remove('selected');
+            if (grid && grid.children[index]) grid.children[index].classList.remove('selected');
+        } else {
+            selectedItems.push(item);
+            tr.classList.add('selected');
+            if (grid && grid.children[index]) grid.children[index].classList.add('selected');
+        }
+        selectedItem = selectedItems.length > 0 ? selectedItems[selectedItems.length - 1] : null;
+    } else {
+        document.querySelectorAll('.fm-table tr, .grid-item').forEach(r => r.classList.remove('selected'));
+        tr.classList.add('selected');
+        const index = Array.from(tr.parentNode.children).indexOf(tr);
+        const grid = document.getElementById('file-grid');
+        if (grid && grid.children[index]) {
+            grid.children[index].classList.add('selected');
+        }
+        selectedItem = item;
+        selectedItems = [item];
     }
-    selectedItem = item;
-    if (e && e.button === 2) return;
+    if (e && e.button === 2 && !selectedItems.find(i => i.path === item.path)) {
+        document.querySelectorAll('.fm-table tr, .grid-item').forEach(r => r.classList.remove('selected'));
+        tr.classList.add('selected');
+        const index = Array.from(tr.parentNode.children).indexOf(tr);
+        const grid = document.getElementById('file-grid');
+        if (grid && grid.children[index]) grid.children[index].classList.add('selected');
+        selectedItem = item;
+        selectedItems = [item];
+    }
 }
 
 function selectGridItem(div, item, e) {
-    document.querySelectorAll('.fm-table tr, .grid-item').forEach(r => r.classList.remove('selected'));
-    div.classList.add('selected');
-    const index = Array.from(div.parentNode.children).indexOf(div);
-    const tbody = document.getElementById('file-list');
-    if (tbody && tbody.children[index]) {
-        tbody.children[index].classList.add('selected');
+    if (e && (e.ctrlKey || e.metaKey)) {
+        const idx = selectedItems.findIndex(i => i.path === item.path);
+        const index = Array.from(div.parentNode.children).indexOf(div);
+        const tbody = document.getElementById('file-list');
+        if (idx > -1) {
+            selectedItems.splice(idx, 1);
+            div.classList.remove('selected');
+            if (tbody && tbody.children[index]) tbody.children[index].classList.remove('selected');
+        } else {
+            selectedItems.push(item);
+            div.classList.add('selected');
+            if (tbody && tbody.children[index]) tbody.children[index].classList.add('selected');
+        }
+        selectedItem = selectedItems.length > 0 ? selectedItems[selectedItems.length - 1] : null;
+    } else {
+        document.querySelectorAll('.fm-table tr, .grid-item').forEach(r => r.classList.remove('selected'));
+        div.classList.add('selected');
+        const index = Array.from(div.parentNode.children).indexOf(div);
+        const tbody = document.getElementById('file-list');
+        if (tbody && tbody.children[index]) {
+            tbody.children[index].classList.add('selected');
+        }
+        selectedItem = item;
+        selectedItems = [item];
     }
-    selectedItem = item;
-    if (e && e.button === 2) return;
+    if (e && e.button === 2 && !selectedItems.find(i => i.path === item.path)) {
+        document.querySelectorAll('.fm-table tr, .grid-item').forEach(r => r.classList.remove('selected'));
+        div.classList.add('selected');
+        const index = Array.from(div.parentNode.children).indexOf(div);
+        const tbody = document.getElementById('file-list');
+        if (tbody && tbody.children[index]) tbody.children[index].classList.add('selected');
+        selectedItem = item;
+        selectedItems = [item];
+    }
 }
 
 function setDisplayFormat(mode) {
@@ -635,28 +687,29 @@ async function renameItem() {
 
 function deleteItem() {
     hideContextMenu();
-    if (!selectedItem) return;
-    if (!confirm(`Delete "${selectedItem.name}"? This cannot be undone.`)) return;
+    if (selectedItems.length === 0) return;
+    const msg = selectedItems.length > 1 ? `Delete ${selectedItems.length} items? This cannot be undone.` : `Delete "${selectedItems[0].name}"? This cannot be undone.`;
+    if (!confirm(msg)) return;
 
     fetch('/api/files/action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             action: 'delete',
-            path: selectedItem.path
+            path: selectedItems.map(i => i.path)
         })
     }).then(refreshAfterAction);
 }
 
 function copyItem(op) {
     hideContextMenu();
-    if (!selectedItem) return;
-    clipboard = { path: selectedItem.path, op: op };
+    if (selectedItems.length === 0) return;
+    clipboard = { paths: selectedItems.map(i => i.path), op: op };
 }
 
 function pasteItem() {
     hideContextMenu();
-    if (!clipboard) return;
+    if (!clipboard || !clipboard.paths || clipboard.paths.length === 0) return;
 
     fetch('/api/files/action', {
         method: 'POST',
@@ -664,7 +717,7 @@ function pasteItem() {
         body: JSON.stringify({
             action: 'paste',
             path: currentPath,
-            source: clipboard.path,
+            source: clipboard.paths,
             operation: clipboard.op
         })
     }).then(r => r.json()).then(data => {
@@ -769,6 +822,11 @@ function filterFiles(query) {
 
 function clearSearch() {
     document.getElementById('search-input').value = '';
+    selectedItem = null;
+    selectedItems = [];
+    document.querySelectorAll('.fm-table tr').forEach(r => r.classList.remove('selected'));
+    document.querySelectorAll('.grid-item').forEach(r => r.classList.remove('selected'));
+    document.getElementById('detail-panel').classList.add('hidden');
     loadFiles(currentPath);
 }
 

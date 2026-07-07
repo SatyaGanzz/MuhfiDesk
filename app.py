@@ -1627,10 +1627,14 @@ def file_action():
     
     try:
         if action == 'delete':
-            if os.path.isdir(path):
-                shutil.rmtree(path)
-            else:
-                os.remove(path)
+            paths = data.get('path')
+            if isinstance(paths, str):
+                paths = [paths]
+            for p in paths:
+                if os.path.isdir(p):
+                    shutil.rmtree(p)
+                else:
+                    os.remove(p)
         elif action == 'create_folder':
             os.makedirs(path, exist_ok=True)
         elif action == 'create_file':
@@ -1643,25 +1647,28 @@ def file_action():
                 return blocked
             os.rename(path, new_path)
         elif action == 'paste':
-            source = data.get('source')
+            sources = data.get('source')
+            if isinstance(sources, str):
+                sources = [sources]
             dest = path # paste into this folder
-            blocked = require_safe_path_for_role(source, 'paste source')
-            if blocked:
-                return blocked
-            # Simple handling: copy raw
-            base_name = os.path.basename(source)
-            final_dest = os.path.join(dest, base_name)
-            blocked = require_safe_path_for_role(final_dest, 'paste target')
-            if blocked:
-                return blocked
-            
-            if data.get('operation') == 'cut':
-                shutil.move(source, final_dest)
-            else:
-                if os.path.isdir(source):
-                    shutil.copytree(source, final_dest)
+            for source in sources:
+                blocked = require_safe_path_for_role(source, 'paste source')
+                if blocked:
+                    return blocked
+                # Simple handling: copy raw
+                base_name = os.path.basename(source)
+                final_dest = os.path.join(dest, base_name)
+                blocked = require_safe_path_for_role(final_dest, 'paste target')
+                if blocked:
+                    return blocked
+                
+                if data.get('operation') == 'cut':
+                    shutil.move(source, final_dest)
                 else:
-                    shutil.copy2(source, final_dest)
+                    if os.path.isdir(source):
+                        shutil.copytree(source, final_dest)
+                    else:
+                        shutil.copy2(source, final_dest)
         
         return jsonify({'success': True})
     except Exception as e:

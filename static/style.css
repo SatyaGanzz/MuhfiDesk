@@ -947,11 +947,55 @@ body.theme-dark .sm-footer, body.theme-glassmorphic .sm-footer { background: var
 /* ─── Responsive ─────────────────────────────────────────────────── */
 @media (max-width: 768px) {
     .app-container { padding: 1rem; }
-    .widgets-area  { grid-template-columns: 1fr; }
+    .widgets-area  { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
     .top-bar {
         flex-direction: column;
         gap: 1rem;
-        align-items: flex-start;
+        align-items: center;
         border-radius: 20px;
+        padding: 1rem;
     }
+    .system-status { flex-wrap: wrap; justify-content: center; gap: 1rem; }
+    
+    /* Modals */
+    .storage-modal-card,
+    .ad-card,
+    .logout-card,
+    .detail-card {
+        width: 95% !important;
+        max-width: 400px !important;
+        padding: 1.5rem !important;
+    }
+    
+    .docker-panel {
+        width: 90%;
+        right: 5%;
+    }
+}
+
+@media (max-width: 480px) {
+    .app-container { padding: 0.5rem; }
+    .widgets-area  { grid-template-columns: 1fr; }
+    .top-bar { margin-bottom: 1.5rem; }
+    .clock-widget h1 { font-size: 2rem; text-align: center; }
+    .system-status { flex-direction: column; gap: 0.5rem; font-size: 0.95rem; }
+    
+    /* Apps Grid */
+    .apps-grid { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+    .app-item { padding: 0.8rem; gap: 0.5rem; }
+    .app-icon { width: 48px; height: 48px; font-size: 1.5rem; border-radius: 14px; }
+    .app-name { font-size: 0.8rem; text-align: center; }
+    
+    /* Widgets */
+    .widget-card { min-height: 180px; padding: 1rem; }
+    .progress-circle { width: 80px; height: 80px; }
+    .progress-circle span { font-size: 1.2rem; }
+    
+    /* File Manager */
+    .fm-container { position: relative; }
+    .fm-sidebar { position: absolute; height: 100%; z-index: 100; box-shadow: 2px 0 10px rgba(0,0,0,0.5); }
+    .fm-header { flex-direction: column; align-items: stretch; gap: 0.8rem; }
+    .fm-breadcrumbs { margin-bottom: 0.5rem; }
+    .fm-table th, .fm-table td { padding: 0.5rem; font-size: 0.8rem; }
+    #search-input { width: 100% !important; }
 }
