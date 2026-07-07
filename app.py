@@ -22,6 +22,7 @@ import io
 import yaml
 import docker # Ensure docker is imported
 import sys
+import tempfile
 
 # Tambahkan direktori scripts agar modul telegram_notifier bisa diimpor
 if os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scripts') not in sys.path:
@@ -6363,12 +6364,15 @@ def files_upload_endpoint():
 
             # Stream to disk in chunks to avoid loading entire file into RAM
             try:
+                f.stream.seek(0)  # Ensure stream cursor is at the start
                 with open(save_path, 'wb') as out:
                     while True:
                         chunk = f.stream.read(CHUNK_SIZE)
                         if not chunk:
                             break
                         out.write(chunk)
+                    out.flush()
+                    os.fsync(out.fileno())  # Force OS to write buffer to disk
             except IOError as io_err:
                 # Clean up partial file on write failure
                 if os.path.exists(save_path):
