@@ -827,6 +827,13 @@ async function uploadFiles(files) {
                     const currentLoaded = loadedTotal + e.loaded;
                     const percent = Math.round((currentLoaded / totalSize) * 100);
                     updateUploadProgress(percent, currentLoaded, totalSize);
+                    
+                    if (percent === 100) {
+                        const titleEl = document.querySelector('.upw-title');
+                        if (titleEl) {
+                            titleEl.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Saving to disk...`;
+                        }
+                    }
                 }
             });
 
@@ -993,11 +1000,20 @@ function completeUploadProgress(success, message) {
 function hideUploadProgress() {
     const w = document.getElementById('upload-progress-widget');
     if (w) {
-        w.classList.remove('active');
-        w.classList.add('hiding');
+        // Add fade out transition
+        w.style.transition = 'opacity 1s ease, transform 1s ease';
+        w.style.opacity = '0';
+        w.style.transform = 'translateY(20px)'; // slight slide down effect
+        
         setTimeout(() => {
+            w.classList.remove('active');
             w.classList.remove('hiding');
-        }, 400);
+            w.style.display = 'none';
+            // Reset styles for next upload
+            w.style.opacity = '1';
+            w.style.transform = 'translateY(0)';
+            w.style.transition = '';
+        }, 1000); // Wait 1 second for the CSS transition to finish
     }
 }
 
