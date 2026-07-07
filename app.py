@@ -6362,11 +6362,8 @@ def files_upload_stream_endpoint():
 
         CHUNK_SIZE = 8 * 1024 * 1024
         bytes_read = 0
-        last_sync = 0
-        SYNC_INTERVAL = 50 * 1024 * 1024  # fsync every 50MB to prevent I/O freeze on STBs
         
         try:
-            import time
             with open(save_path, 'wb') as out:
                 while bytes_read < content_length:
                     chunk_size = min(CHUNK_SIZE, content_length - bytes_read)
@@ -6375,18 +6372,6 @@ def files_upload_stream_endpoint():
                         break
                     out.write(chunk)
                     bytes_read += len(chunk)
-                    
-                    # Periodic flush to prevent massive I/O stall at the end
-                    if bytes_read - last_sync >= SYNC_INTERVAL:
-                        out.flush()
-                        os.fsync(out.fileno())
-                        last_sync = bytes_read
-                        
-                    # Tiny sleep to prevent starving the STB's CPU/Bus
-                    time.sleep(0.01)
-                    
-                out.flush()
-                os.fsync(out.fileno())
         except Exception as e:
             if os.path.exists(save_path):
                 try: os.remove(save_path)
