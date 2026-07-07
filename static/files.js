@@ -789,7 +789,9 @@ function openInTerminal() {
     window.location.href = '/terminal?path=' + encodeURIComponent(path);
 }
 
-// Upload Files
+// Upload Files — with progress tracking via XHR
+let activeUploadXHR = null;
+
 function uploadFiles(files) {
     if (!files || files.length === 0) return;
 
@@ -802,33 +804,173 @@ function uploadFiles(files) {
     const formData = new FormData();
     formData.append('path', currentPath);
 
+    let totalSize = 0;
+    const fileNames = [];
     for (let i = 0; i < files.length; i++) {
         formData.append('file', files[i]);
+        totalSize += files[i].size;
+        fileNames.push(files[i].name);
     }
 
     document.getElementById('status-text').textContent = `Uploading ${files.length} file(s)...`;
 
-    fetch('/api/files/upload', {
-        method: 'POST',
-        body: formData
-    })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
+    // Show progress widget
+    showUploadProgress(fileNames, totalSize);
+
+    const xhr = new XMLHttpRequest();
+    activeUploadXHR = xhr;
+
+    xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            updateUploadProgress(percent, e.loaded, e.total);
+        }
+    });
+
+    xhr.addEventListener('load', () => {
+        activeUploadXHR = null;
+        try {
+            const data = JSON.parse(xhr.responseText);
+            if (xhr.status >= 200 && xhr.status < 300 && data.success) {
+                completeUploadProgress(true, `Uploaded: ${data.files.join(', ')}`);
                 document.getElementById('status-text').textContent = `Uploaded: ${data.files.join(', ')}`;
                 loadFiles(currentPath);
             } else {
-                alert('Upload failed: ' + (data.error || 'Unknown error'));
+                const errMsg = data.error || `Server error (${xhr.status})`;
+                completeUploadProgress(false, errMsg);
                 document.getElementById('status-text').textContent = 'Upload failed';
             }
-        })
-        .catch(err => {
-            alert('Upload error: ' + err);
-            document.getElementById('status-text').textContent = 'Upload error';
-        })
-        .finally(() => {
-            document.getElementById('upload-input').value = '';
-        });
+        } catch (e) {
+            completeUploadProgress(false, 'Invalid server response');
+            document.getElementById('status-text').textContent = 'Upload failed';
+        }
+    });
+
+    xhr.addEventListener('error', () => {
+        activeUploadXHR = null;
+        completeUploadProgress(false, 'Network error — check your connection');
+        document.getElementById('status-text').textContent = 'Upload error';
+    });
+
+    xhr.addEventListener('abort', () => {
+        activeUploadXHR = null;
+        completeUploadProgress(false, 'Upload cancelled');
+        document.getElementById('status-text').textContent = 'Upload cancelled';
+    });
+
+    xhr.open('POST', '/api/files/upload');
+    xhr.send(formData);
+
+    // Reset file input so the same file can be re-uploaded
+    document.getElementById('upload-input').value = '';
+}
+
+function cancelUpload() {
+    if (activeUploadXHR) {
+        activeUploadXHR.abort();
+    }
+}
+
+// ---- Upload Progress Widget (bottom-right corner) ----
+
+function _getOrCreateProgressWidget() {
+    let widget = document.getElementById('upload-progress-widget');
+    if (!widget) {
+        widget = document.createElement('div');
+        widget.id = 'upload-progress-widget';
+        widget.innerHTML = `
+            <div class="upw-header">
+                <span class="upw-title"><i class="fa-solid fa-cloud-arrow-up"></i> Uploading...</span>
+                <div class="upw-actions">
+                    <button class="upw-btn-cancel" onclick="cancelUpload()" title="Cancel upload"><i class="fa-solid fa-xmark"></i></button>
+                    <button class="upw-btn-close" onclick="hideUploadProgress()" title="Close" style="display:none"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            </div>
+            <div class="upw-files"></div>
+            <div class="upw-bar-wrap">
+                <div class="upw-bar"></div>
+            </div>
+            <div class="upw-details">
+                <span class="upw-percent">0%</span>
+                <span class="upw-size"></span>
+            </div>
+            <div class="upw-result" style="display:none"></div>
+        `;
+        document.body.appendChild(widget);
+    }
+    return widget;
+}
+
+function showUploadProgress(fileNames, totalSize) {
+    const w = _getOrCreateProgressWidget();
+    w.className = 'active';
+    w.querySelector('.upw-title').innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> Uploading ${fileNames.length} file(s)`;
+    
+    const filesEl = w.querySelector('.upw-files');
+    filesEl.innerHTML = '';
+    fileNames.forEach(name => {
+        const div = document.createElement('div');
+        div.className = 'upw-file-item';
+        div.innerHTML = `<i class="fa-solid fa-file"></i> <span>${name}</span>`;
+        filesEl.appendChild(div);
+    });
+
+    w.querySelector('.upw-bar').style.width = '0%';
+    w.querySelector('.upw-percent').textContent = '0%';
+    w.querySelector('.upw-size').textContent = `0 B / ${formatSize(totalSize)}`;
+    w.querySelector('.upw-result').style.display = 'none';
+    w.querySelector('.upw-btn-cancel').style.display = '';
+    w.querySelector('.upw-btn-close').style.display = 'none';
+    w.querySelector('.upw-bar').className = 'upw-bar';
+}
+
+function updateUploadProgress(percent, loaded, total) {
+    const w = document.getElementById('upload-progress-widget');
+    if (!w) return;
+    w.querySelector('.upw-bar').style.width = percent + '%';
+    w.querySelector('.upw-percent').textContent = percent + '%';
+    w.querySelector('.upw-size').textContent = `${formatSize(loaded)} / ${formatSize(total)}`;
+}
+
+function completeUploadProgress(success, message) {
+    const w = document.getElementById('upload-progress-widget');
+    if (!w) return;
+    const bar = w.querySelector('.upw-bar');
+    const result = w.querySelector('.upw-result');
+
+    if (success) {
+        bar.style.width = '100%';
+        bar.classList.add('success');
+        w.querySelector('.upw-percent').textContent = '100%';
+        w.querySelector('.upw-title').innerHTML = `<i class="fa-solid fa-circle-check"></i> Upload Complete`;
+        result.innerHTML = `<i class="fa-solid fa-check" style="color:#3fb950"></i> ${message}`;
+    } else {
+        bar.classList.add('error');
+        w.querySelector('.upw-title').innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Upload Failed`;
+        result.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="color:#f85149"></i> ${message}`;
+    }
+
+    result.style.display = 'block';
+    w.querySelector('.upw-btn-cancel').style.display = 'none';
+    w.querySelector('.upw-btn-close').style.display = '';
+
+    // Auto-hide after 5s on success
+    if (success) {
+        setTimeout(() => {
+            hideUploadProgress();
+        }, 5000);
+    }
+}
+
+function hideUploadProgress() {
+    const w = document.getElementById('upload-progress-widget');
+    if (w) {
+        w.classList.remove('active');
+        w.classList.add('hiding');
+        setTimeout(() => {
+            w.classList.remove('hiding');
+        }, 400);
+    }
 }
 
 // Download Selected File
@@ -897,32 +1039,5 @@ function setupDragAndDrop() {
         if (files.length > 0) {
             uploadFiles(files);
         }
-    });
-}
-
-function uploadFiles(files) {
-    const formData = new FormData();
-    formData.append('path', currentPath);
-    for (let i = 0; i < files.length; i++) {
-        formData.append('file', files[i]);
-    }
-
-    document.getElementById('status-text').textContent = `Uploading ${files.length} file(s)...`;
-
-    fetch('/api/files/upload', {
-        method: 'POST',
-        body: formData
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.error) {
-            alert('Upload failed: ' + data.error);
-        }
-        loadFiles(currentPath);
-    })
-    .catch(err => {
-        console.error(err);
-        alert('Upload error');
-        loadFiles(currentPath);
     });
 }

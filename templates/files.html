@@ -393,6 +393,149 @@
             margin-bottom: 1rem;
         }
 
+        /* ---- Upload Progress Widget ---- */
+        #upload-progress-widget {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            width: 360px;
+            max-width: calc(100vw - 2rem);
+            background: rgba(22, 27, 34, 0.95);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+            z-index: 10001;
+            overflow: hidden;
+            transform: translateY(120%) scale(0.95);
+            opacity: 0;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+            pointer-events: none;
+        }
+        #upload-progress-widget.active {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #upload-progress-widget.hiding {
+            transform: translateY(120%) scale(0.95);
+            opacity: 0;
+            pointer-events: none;
+        }
+        .upw-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .upw-title {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #e6edf3;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .upw-title i {
+            color: #FF9966;
+            font-size: 1rem;
+        }
+        .upw-actions button {
+            background: none;
+            border: none;
+            color: #8b949e;
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 4px 6px;
+            border-radius: 4px;
+            transition: all 0.15s;
+        }
+        .upw-actions button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #f85149;
+        }
+        .upw-files {
+            padding: 0.5rem 1rem;
+            max-height: 80px;
+            overflow-y: auto;
+        }
+        .upw-file-item {
+            font-size: 0.75rem;
+            color: #8b949e;
+            padding: 2px 0;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .upw-file-item i {
+            color: #58a6ff;
+            font-size: 0.7rem;
+            flex-shrink: 0;
+        }
+        .upw-bar-wrap {
+            margin: 0 1rem 0.4rem;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .upw-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #FF9966, #FF5E62);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+        .upw-bar::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            animation: upw-shimmer 1.5s infinite;
+        }
+        .upw-bar.success {
+            background: linear-gradient(90deg, #238636, #3fb950);
+        }
+        .upw-bar.success::after {
+            animation: none;
+        }
+        .upw-bar.error {
+            background: linear-gradient(90deg, #da3633, #f85149);
+        }
+        .upw-bar.error::after {
+            animation: none;
+        }
+        @keyframes upw-shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        .upw-details {
+            display: flex;
+            justify-content: space-between;
+            padding: 0 1rem 0.6rem;
+            font-size: 0.72rem;
+            color: #8b949e;
+        }
+        .upw-percent {
+            font-weight: 600;
+            color: #e6edf3;
+        }
+        .upw-result {
+            padding: 0.5rem 1rem 0.7rem;
+            font-size: 0.78rem;
+            color: #e6edf3;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
         /* Editor Modal */
         .editor-modal {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -614,7 +757,7 @@
             </div>
         </div>
 
-        <script src="{{ url_for('static', filename='files.js') }}?v=3"></script>
+        <script src="{{ url_for('static', filename='files.js') }}?v=4"></script>
 
 
     <div id="drop-overlay">
