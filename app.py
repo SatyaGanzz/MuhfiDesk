@@ -6299,6 +6299,93 @@ except ImportError:
         return re.sub(r'[^\w\s.-]', '', filename).strip()
 
 
+@app.route('/api/files/upload_stream', methods=['POST'])
+@login_required
+def files_upload_stream_endpoint():
+    """Upload a single file directly from stream, bypassing tmp files completely."""
+    import urllib.parse
+    if session.get('role') not in ['owner', 'admin']:
+        return jsonify({'error': 'Access denied'}), 403
+
+    try:
+        dest_path = urllib.parse.unquote(request.headers.get('X-Upload-Path', '/'))
+        dest_path = os.path.normpath(dest_path)
+        
+        filename = urllib.parse.unquote(request.headers.get('X-File-Name', ''))
+        if not filename:
+            return jsonify({'error': 'No filename provided'}), 400
+
+        blocked = require_safe_path_for_role(dest_path, 'upload destination')
+        if blocked:
+            return blocked
+
+        if not os.path.exists(dest_path):
+            return jsonify({'error': f'Destination path not found: {dest_path}'}), 404
+        if not os.path.isdir(dest_path):
+            return jsonify({'error': 'Destination is not a directory'}), 400
+
+        # Check disk space
+        try:
+            disk_usage = psutil.disk_usage(dest_path)
+            content_length = request.content_length
+            if content_length and content_length > disk_usage.free:
+                free_gb = disk_usage.free / (1024**3)
+                need_gb = content_length / (1024**3)
+                return jsonify({
+                    'error': f'Not enough disk space. Need {need_gb:.1f} GB but only {free_gb:.1f} GB free'
+                }), 507
+        except Exception:
+            pass
+
+        fname = secure_filename(filename)
+        if not fname:
+            fname = filename.replace('/', '_').replace('\\', '_')
+        save_path = os.path.join(dest_path, fname)
+
+        blocked = require_safe_path_for_role(save_path, 'upload file')
+        if blocked:
+            return blocked
+
+        counter = 1
+        name, ext = os.path.splitext(fname)
+        while os.path.exists(save_path):
+            save_path = os.path.join(dest_path, f"{name}_{counter}{ext}")
+            counter += 1
+
+        stream = request.environ.get('wsgi.input')
+        if stream is None:
+            return jsonify({'error': 'No input stream'}), 400
+            
+        content_length = request.content_length
+        if not content_length:
+            return jsonify({'error': 'Content-Length header required'}), 411
+
+        CHUNK_SIZE = 8 * 1024 * 1024
+        bytes_read = 0
+        
+        try:
+            with open(save_path, 'wb') as out:
+                while bytes_read < content_length:
+                    chunk_size = min(CHUNK_SIZE, content_length - bytes_read)
+                    chunk = stream.read(chunk_size)
+                    if not chunk:
+                        break
+                    out.write(chunk)
+                    bytes_read += len(chunk)
+                out.flush()
+                os.fsync(out.fileno())
+        except Exception as e:
+            if os.path.exists(save_path):
+                try: os.remove(save_path)
+                except: pass
+            return jsonify({'error': f'Disk write error: {e}'}), 500
+
+        audit_log('FILES_UPLOAD', f"Uploaded file to {dest_path}: {os.path.basename(save_path)}", session.get('username'))
+        return jsonify({'success': True, 'files': [os.path.basename(save_path)]})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.errorhandler(413)
 def request_entity_too_large(e):
     return jsonify({'error': 'File is too large'}), 413

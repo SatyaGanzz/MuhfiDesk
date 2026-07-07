@@ -801,80 +801,96 @@ function uploadFiles(files) {
         return;
     }
 
-    const formData = new FormData();
-    formData.append('path', currentPath);
-
     let totalSize = 0;
     const fileNames = [];
     for (let i = 0; i < files.length; i++) {
-        formData.append('file', files[i]);
         totalSize += files[i].size;
         fileNames.push(files[i].name);
     }
 
     document.getElementById('status-text').textContent = `Uploading ${files.length} file(s)...`;
-
-    // Show progress widget
     showUploadProgress(fileNames, totalSize);
 
-    const xhr = new XMLHttpRequest();
-    activeUploadXHR = xhr;
+    let loadedTotal = 0;
+    let hasError = false;
 
-    xhr.upload.addEventListener('progress', (e) => {
-        if (e.lengthComputable) {
-            const percent = Math.round((e.loaded / e.total) * 100);
-            updateUploadProgress(percent, e.loaded, e.total);
-        }
-    });
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (hasError) break;
 
-    xhr.addEventListener('load', () => {
-        activeUploadXHR = null;
-        try {
-            // Handle 413 specifically (may return HTML instead of JSON)
-            if (xhr.status === 413) {
-                const errMsg = '413 Request Entity Too Large: The file exceeds the server limit.';
-                completeUploadProgress(false, errMsg);
-                document.getElementById('status-text').textContent = 'Upload failed — file too large';
-                return;
-            }
+        await new Promise((resolve) => {
+            const xhr = new XMLHttpRequest();
+            activeUploadXHR = xhr;
 
-            const data = JSON.parse(xhr.responseText);
-            if (xhr.status >= 200 && xhr.status < 300 && data.success) {
-                completeUploadProgress(true, `Uploaded: ${data.files.join(', ')}`);
-                document.getElementById('status-text').textContent = `Uploaded: ${data.files.join(', ')}`;
-                loadFiles(currentPath);
-            } else {
-                const errMsg = data.error || `Server error (${xhr.status})`;
-                completeUploadProgress(false, errMsg);
-                document.getElementById('status-text').textContent = 'Upload failed';
-            }
-        } catch (e) {
-            // If response isn't JSON, show the HTTP status
-            const errMsg = xhr.status >= 400
-                ? `Server error (${xhr.status}): ${xhr.statusText}`
-                : 'Invalid server response';
-            completeUploadProgress(false, errMsg);
-            document.getElementById('status-text').textContent = 'Upload failed';
-        }
-    });
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable) {
+                    const currentLoaded = loadedTotal + e.loaded;
+                    const percent = Math.round((currentLoaded / totalSize) * 100);
+                    updateUploadProgress(percent, currentLoaded, totalSize);
+                }
+            });
 
-    xhr.addEventListener('error', () => {
-        activeUploadXHR = null;
-        completeUploadProgress(false, 'Network error — check your connection');
-        document.getElementById('status-text').textContent = 'Upload error';
-    });
+            xhr.addEventListener('load', () => {
+                activeUploadXHR = null;
+                loadedTotal += file.size;
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        if (!data.success) {
+                            hasError = true;
+                            completeUploadProgress(false, data.error || 'Server error');
+                        }
+                    } catch(e) {
+                         // Non JSON
+                    }
+                } else if (xhr.status === 413) {
+                    hasError = true;
+                    completeUploadProgress(false, '413 Request Entity Too Large');
+                } else if (xhr.status === 507) {
+                    hasError = true;
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        completeUploadProgress(false, data.error || 'Not enough disk space');
+                    } catch(e) {
+                        completeUploadProgress(false, 'Not enough disk space');
+                    }
+                } else {
+                    hasError = true;
+                    completeUploadProgress(false, `Server error (${xhr.status})`);
+                }
+                resolve();
+            });
 
-    xhr.addEventListener('abort', () => {
-        activeUploadXHR = null;
-        completeUploadProgress(false, 'Upload cancelled');
-        document.getElementById('status-text').textContent = 'Upload cancelled';
-    });
+            xhr.addEventListener('error', () => {
+                activeUploadXHR = null;
+                hasError = true;
+                completeUploadProgress(false, 'Network error');
+                resolve();
+            });
 
-    xhr.open('POST', '/api/files/upload');
-    xhr.send(formData);
+            xhr.addEventListener('abort', () => {
+                activeUploadXHR = null;
+                hasError = true;
+                completeUploadProgress(false, 'Upload cancelled');
+                resolve();
+            });
 
-    // Reset file input so the same file can be re-uploaded
+            xhr.open('POST', '/api/files/upload_stream');
+            xhr.setRequestHeader('X-Upload-Path', encodeURIComponent(currentPath));
+            xhr.setRequestHeader('X-File-Name', encodeURIComponent(file.name));
+            xhr.send(file);
+        });
+    }
+
     document.getElementById('upload-input').value = '';
+
+    if (!hasError) {
+        completeUploadProgress(true, `Uploaded ${files.length} file(s)`);
+        document.getElementById('status-text').textContent = `Uploaded ${files.length} file(s)`;
+        loadFiles(currentPath);
+    } else {
+        document.getElementById('status-text').textContent = 'Upload failed/cancelled';
+    }
 }
 
 function cancelUpload() {
