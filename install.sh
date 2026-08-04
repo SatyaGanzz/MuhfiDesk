@@ -21,11 +21,14 @@ echo "🚀 Starting MuhfiDesk Installation..."
 echo "📦 Installing system dependencies..."
 if [ -x "$(command -v apt-get)" ]; then
     apt-get update -y
-    apt-get install -y python3 python3-pip python3-venv git curl fastfetch
+    apt-get install -y python3 python3-pip python3-venv git curl
+    apt-get install -y fastfetch || echo "⚠️ Failed to install fastfetch, skipping..."
 elif [ -x "$(command -v dnf)" ]; then
-    dnf install -y python3 python3-pip git curl fastfetch
+    dnf install -y python3 python3-pip git curl
+    dnf install -y fastfetch || echo "⚠️ Failed to install fastfetch, skipping..."
 elif [ -x "$(command -v pacman)" ]; then
-    pacman -Sy --noconfirm python python-pip git curl fastfetch
+    pacman -Sy --noconfirm python python-pip git curl
+    pacman -S --noconfirm fastfetch || echo "⚠️ Failed to install fastfetch, skipping..."
 else
     echo "⚠️ Unsupported package manager. Please install python3, pip, git, and fastfetch manually."
 fi

@@ -707,27 +707,85 @@ function copyItem(op) {
     clipboard = { paths: selectedItems.map(i => i.path), op: op };
 }
 
-function pasteItem() {
+async function pasteItem() {
     hideContextMenu();
     if (!clipboard || !clipboard.paths || clipboard.paths.length === 0) return;
 
-    fetch('/api/files/action', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            action: 'paste',
-            path: currentPath,
-            source: clipboard.paths,
-            operation: clipboard.op
-        })
-    }).then(r => r.json()).then(data => {
-        if (data.success) {
-            clipboard = null;
-            loadFiles(currentPath);
-        } else {
-            alert("Paste failed: " + (data.error || 'Unknown'));
+    // Show widget
+    const widget = document.getElementById('cp-progress-widget');
+    if (widget) {
+        widget.classList.remove('hiding');
+        widget.classList.add('active');
+        document.getElementById('cp-title-text').textContent = clipboard.op === 'cut' ? 'Moving Files...' : 'Copying Files...';
+        document.getElementById('cp-progress-bar').style.width = '0%';
+        document.getElementById('cp-progress-percent').textContent = '0%';
+        document.getElementById('cp-current-file').innerHTML = `<i class="fa-solid fa-file"></i> <span>Preparing...</span>`;
+    }
+    
+    try {
+        const response = await fetch('/api/files/paste_stream', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'paste',
+                path: currentPath,
+                source: clipboard.paths,
+                operation: clipboard.op
+            })
+        });
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let buffer = "";
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            buffer += decoder.decode(value, { stream: true });
+            
+            let lines = buffer.split('\\n\\n');
+            buffer = lines.pop(); // Keep last incomplete chunk in buffer
+            
+            for (let line of lines) {
+                if (line.startsWith('data: ')) {
+                    let dataStr = line.substring(6);
+                    try {
+                        let data = JSON.parse(dataStr);
+                        if (widget) {
+                            if (data.status === 'progress') {
+                                document.getElementById('cp-current-file').innerHTML = `<i class="fa-solid fa-file"></i> <span>${data.file}</span>`;
+                                document.getElementById('cp-progress-bar').style.width = data.progress + '%';
+                                document.getElementById('cp-progress-percent').textContent = data.progress + '%';
+                                document.getElementById('cp-progress-text').textContent = `${data.processed} / ${data.total}`;
+                            } else if (data.status === 'done') {
+                                document.getElementById('cp-current-file').innerHTML = `<i class="fa-solid fa-check" style="color:#3fb950"></i> <span>Completed!</span>`;
+                                document.getElementById('cp-progress-bar').style.width = '100%';
+                                document.getElementById('cp-progress-bar').classList.add('success');
+                                setTimeout(() => {
+                                    widget.classList.replace('active', 'hiding');
+                                    document.getElementById('cp-progress-bar').classList.remove('success');
+                                    clipboard = null;
+                                    loadFiles(currentPath);
+                                }, 2000);
+                            } else if (data.status === 'error') {
+                                alert("Paste error: " + data.message);
+                                widget.classList.replace('active', 'hiding');
+                            }
+                        } else {
+                            if (data.status === 'done' || data.status === 'error') {
+                                clipboard = null;
+                                loadFiles(currentPath);
+                            }
+                        }
+                    } catch (e) {}
+                }
+            }
         }
-    });
+    } catch (err) {
+        alert("Request failed: " + err);
+        if (widget) widget.classList.replace('active', 'hiding');
+    }
 }
 
 function refreshAfterAction(res) {

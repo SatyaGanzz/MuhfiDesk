@@ -1674,6 +1674,88 @@ def file_action():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+import queue
+
+@app.route('/api/files/paste_stream', methods=['POST'])
+@requires_permission('files', 'full')
+def file_paste_stream():
+    data = request.json
+    path = data.get('path')
+    sources = data.get('source')
+    operation = data.get('operation')
+    
+    if isinstance(sources, str):
+        sources = [sources]
+        
+    blocked = require_safe_path_for_role(path, 'paste_stream target')
+    if blocked: return blocked
+    
+    q = queue.Queue()
+    
+    def worker():
+        try:
+            total_items = 0
+            processed_items = 0
+            
+            # 1. Count items
+            for src in sources:
+                if os.path.isdir(src):
+                    for root, dirs, files in os.walk(src):
+                        total_items += len(dirs) + len(files)
+                else:
+                    total_items += 1
+                    
+            if total_items == 0:
+                q.put({"status": "done"})
+                return
+
+            def report_progress(item_name):
+                nonlocal processed_items
+                processed_items += 1
+                pct = int((processed_items / total_items) * 100)
+                q.put({"status": "progress", "progress": pct, "file": item_name, "processed": processed_items, "total": total_items})
+
+            # Custom copy tree to intercept progress
+            def copy2_with_progress(src, dst, *, follow_symlinks=True):
+                shutil.copy2(src, dst, follow_symlinks=follow_symlinks)
+                report_progress(os.path.basename(src))
+                
+            dest = path
+            for source in sources:
+                blocked = require_safe_path_for_role(source, 'paste source')
+                if blocked: raise Exception("Blocked path")
+                
+                base_name = os.path.basename(source)
+                final_dest = os.path.join(dest, base_name)
+                
+                if operation == 'cut':
+                    # For cut, it's usually fast, just move and report
+                    shutil.move(source, final_dest)
+                    # Report 100% since we can't hook into shutil.move easily
+                    processed_items += total_items
+                    q.put({"status": "progress", "progress": 100, "file": base_name, "processed": total_items, "total": total_items})
+                else:
+                    if os.path.isdir(source):
+                        # Use copytree with custom copy function
+                        shutil.copytree(source, final_dest, copy_function=copy2_with_progress)
+                    else:
+                        copy2_with_progress(source, final_dest)
+
+            q.put({"status": "done"})
+        except Exception as e:
+            q.put({"status": "error", "message": str(e)})
+
+    threading.Thread(target=worker, daemon=True).start()
+
+    def generate():
+        while True:
+            msg = q.get()
+            yield f"data: {json.dumps(msg)}\n\n"
+            if msg.get('status') in ['done', 'error']:
+                break
+                
+    return Response(generate(), mimetype='text/event-stream')
+
 @app.route('/api/files/content', methods=['GET', 'POST'])
 @login_required
 def file_content():
