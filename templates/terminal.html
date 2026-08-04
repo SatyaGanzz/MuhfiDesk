@@ -668,6 +668,15 @@ Restart App=systemctl restart myapp"></textarea>
             const termWrap = document.createElement('div');
             termWrap.className = 'terminal-wrap';
             termWrap.id = 'term-wrap-' + sessionId;
+            
+            // Add connection indicator
+            const indicator = document.createElement('div');
+            indicator.className = 'connection-indicator';
+            indicator.style.cssText = 'position: absolute; top: 45px; right: 15px; font-size: 0.7rem; z-index: 10; background: rgba(0,0,0,0.7); padding: 0.2rem 0.5rem; border-radius: 4px;';
+            indicator.textContent = '🟡 Connecting...';
+            indicator.style.color = '#ffeaa7';
+            termWrap.appendChild(indicator);
+            
             document.getElementById('terminal-container').appendChild(termWrap);
 
             // Create xterm instance with custom theme
@@ -914,14 +923,110 @@ Restart App=systemctl restart myapp"></textarea>
 
         socket.on('terminal_started', data => {
             console.log('Terminal started:', data.session_id);
-            if (terminals[data.session_id]) {
-                const t = terminals[data.session_id];
+            const sessionId = data.session_id;
+            
+            // Update connection indicator
+            const wrap = document.getElementById('term-wrap-' + sessionId);
+            if (wrap) {
+                const indicator = wrap.querySelector('.connection-indicator');
+                if (indicator) {
+                    indicator.textContent = '🟢 Connected';
+                    indicator.style.color = '#55efc4';
+                }
+            }
+            
+            if (terminals[sessionId]) {
+                const t = terminals[sessionId];
                 socket.emit('terminal_resize', {
-                    session_id: data.session_id,
+                    session_id: sessionId,
                     rows: t.term.rows,
                     cols: t.term.cols
                 });
+                
+                // Send initial welcome after connection
+                setTimeout(() => {
+                    t.term.write('\u001b[36mTerminal connected successfully!\u001b[0m\r\n');
+                }, 500);
             }
+        });
+
+        socket.on('terminal_closed', data => {
+            console.log('Terminal closed:', data.session_id);
+            const sessionId = data.session_id;
+            if (terminals[sessionId]) {
+                terminals[sessionId].term.write('\r\n\u001b[31m[Terminal Closed]\u001b[0m\r\n');
+                terminals[sessionId].term.write('\u001b[33mReconnecting...\u001b[0m\r\n');
+                
+                // Auto reconnect after 2 seconds
+                setTimeout(() => {
+                    const t = terminals[sessionId];
+                    if (t) {
+                        socket.emit('start_terminal', {
+                            session_id: sessionId,
+                            path: t.path,
+                            lxd_target: lxdTarget
+                        });
+                    }
+                }, 2000);
+            }
+        });
+
+        socket.on('terminal_error', data => {
+            console.error('Terminal error:', data.error);
+            const sessionId = data.session_id;
+            if (terminals[sessionId]) {
+                terminals[sessionId].term.write(`\r\n\u001b[31m[Error: ${data.error}]\u001b[0m\r\n`);
+                terminals[sessionId].term.write('\u001b[33mClick here or press Enter to retry...\u001b[0m\r\n');
+                
+                // Add retry handler
+                const retryHandler = () => {
+                    const t = terminals[sessionId];
+                    if (t) {
+                        t.term.write('\u001b[33mRetrying connection...\u001b[0m\r\n');
+                        socket.emit('start_terminal', {
+                            session_id: sessionId,
+                            path: t.path,
+                            lxd_target: lxdTarget
+                        });
+                    }
+                    // Remove handler after use
+                    terminals[sessionId].term.off('key', retryHandler);
+                };
+                
+                // Bind retry to any key press
+                terminals[sessionId].term.onKey(retryHandler);
+            }
+        });
+
+        socket.on('terminal_stopped', data => {
+            console.log('Terminal stopped:', data.session_id);
+        });
+
+        socket.on('connect', () => {
+            console.log('Socket connected');
+            document.querySelectorAll('.terminal-wrap').forEach(wrap => {
+                const indicator = wrap.querySelector('.connection-indicator');
+                if (indicator) {
+                    indicator.textContent = '🟢 Connected';
+                    indicator.style.color = '#55efc4';
+                }
+            });
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Socket disconnected');
+            document.querySelectorAll('.terminal-wrap').forEach(wrap => {
+                const indicator = wrap.querySelector('.connection-indicator');
+                if (indicator) {
+                    indicator.textContent = '🔴 Disconnected';
+                    indicator.style.color = '#ff7675';
+                }
+            });
+            
+            // Show reconnection message in all terminals
+            Object.values(terminals).forEach(t => {
+                t.term.write('\r\n\u001b[33m[Socket disconnected - attempting to reconnect...]\u001b[0m\r\n');
+            });
         });
     </script>
 

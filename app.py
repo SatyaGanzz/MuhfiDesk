@@ -1806,54 +1806,100 @@ def file_content():
 def terminal_page():
     return render_template('terminal.html')
 
+@app.route('/api/terminal/test')
+@requires_permission('terminal')
+def terminal_test():
+    """Test endpoint to verify terminal accessibility"""
+    return jsonify({
+        'status': 'ok',
+        'pty_available': all([pty, fcntl, termios]),
+        'nsenter_available': os.system('which nsenter > /dev/null 2>&1') == 0,
+        'bash_available': os.system('which bash > /dev/null 2>&1') == 0
+    })
+
 # WebSocket handlers for terminal
 @socketio.on('start_terminal')
 def handle_start_terminal(data):
+    """Handle terminal start request from client"""
     session_id = data.get('session_id', 'default')
     start_path = data.get('path', '/root')
     
-    # Create PTY
-    master_fd, slave_fd = pty.openpty()
+    # Check if PTY modules are available
+    if not all([pty, fcntl, termios]):
+        emit('terminal_error', {'session_id': session_id, 'error': 'PTY modules not available'})
+        return
     
-    # Fork shell
-    pid = os.fork()
-    if pid == 0:
-        # Child process
-        os.close(master_fd)
-        os.setsid()
-        os.dup2(slave_fd, 0)
-        os.dup2(slave_fd, 1)
-        os.dup2(slave_fd, 2)
-        os.close(slave_fd)
+    print(f"Starting terminal session: {session_id}")
+    
+    try:
+        # Create PTY
+        master_fd, slave_fd = pty.openpty()
         
-        lxd_target = data.get('lxd_target')
-        
-        # Use nsenter to enter host PID 1 namespace (root shell on host)
-        # Assuming container is privileged and shares PID namespace
-        # Adding -i to bash for interactive mode and setting TERM/SHELL
-        os.environ['TERM'] = 'xterm-256color'
-        os.environ['SHELL'] = '/bin/bash'
-        
-        if lxd_target:
-            cmd = ['nsenter', '-t', '1', '-m', '-u', '-n', '-i', 'lxc', 'exec', lxd_target, '--', 'bash', '--login', '-i']
-        else:
-            # Perintah ini akan membersihkan layar, menjalankan fastfetch, lalu masuk ke bash interaktif
-            cmd = ['nsenter', '-t', '1', '-m', '-u', '-n', '-i', 'bash', '--login', '-c', 'clear && fastfetch && exec bash -i']
+        # Fork shell
+        pid = os.fork()
+        if pid == 0:
+            # Child process
+            os.close(master_fd)
+            os.setsid()
+            os.dup2(slave_fd, 0)
+            os.dup2(slave_fd, 1)
+            os.dup2(slave_fd, 2)
+            os.close(slave_fd)
             
-        os.execvp('nsenter', cmd)
-    else:
-        # Parent process
-        os.close(slave_fd)
-        terminal_sessions[session_id] = {
-            'fd': master_fd,
-            'pid': pid
-        }
-        
-        # Start reading thread
-        socketio.start_background_task(read_terminal_output, session_id, master_fd)
-        emit('terminal_started', {'session_id': session_id})
+            lxd_target = data.get('lxd_target')
+            
+            # Set environment variables
+            os.environ['TERM'] = 'xterm-256color'
+            os.environ['SHELL'] = '/bin/bash'
+            os.environ['HOME'] = start_path
+            os.environ['PWD'] = start_path
+            
+            # Change to start path
+            try:
+                os.chdir(start_path)
+            except OSError:
+                os.chdir('/root')  # Fallback to root
+            
+            if lxd_target:
+                cmd = ['nsenter', '-t', '1', '-m', '-u', '-n', '-i', 'lxc', 'exec', lxd_target, '--', 'bash', '--login', '-i']
+                print(f"LXD command: {' '.join(cmd)}")
+                os.execvp(cmd[0], cmd)
+            else:
+                # Try nsenter first, fallback to direct bash if nsenter fails
+                try:
+                    # Check if nsenter is available
+                    subprocess.check_call(['which', 'nsenter'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    # Start with basic bash shell with a welcome message
+                    welcome_cmd = f'echo "Welcome to MuhfiDesk Terminal" && echo "PWD: $(pwd)" && echo "" && exec bash --login -i'
+                    cmd = ['nsenter', '-t', '1', '-m', '-u', '-n', '-i', 'bash', '--login', '-c', welcome_cmd]
+                    print(f"Using nsenter command: {' '.join(cmd)}")
+                except:
+                    # Fallback to direct bash if nsenter not available
+                    cmd = ['bash', '--login', '-i']
+                    print(f"Fallback to direct bash: {' '.join(cmd)}")
+                
+            print(f"Executing command: {' '.join(cmd)}")
+            os.execvp(cmd[0], cmd)
+        else:
+            # Parent process
+            os.close(slave_fd)
+            terminal_sessions[session_id] = {
+                'fd': master_fd,
+                'pid': pid
+            }
+            
+            print(f"Terminal session {session_id} started with PID {pid}")
+            
+            # Start reading thread
+            socketio.start_background_task(read_terminal_output, session_id, master_fd)
+            emit('terminal_started', {'session_id': session_id})
+            
+    except Exception as e:
+        print(f"Error starting terminal {session_id}: {e}")
+        emit('terminal_error', {'session_id': session_id, 'error': str(e)})
 
 def read_terminal_output(session_id, fd):
+    """Read terminal output and send to client"""
     while session_id in terminal_sessions:
         socketio.sleep(0.01)
         try:
@@ -1864,23 +1910,43 @@ def read_terminal_output(session_id, fd):
                         'session_id': session_id,
                         'data': data.decode('utf-8', errors='replace')
                     })
-        except:
+                else:
+                    # EOF - terminal closed
+                    break
+        except OSError:
+            # Terminal closed or error occurred
             break
+        except Exception as e:
+            print(f"Terminal read error: {e}")
+            break
+    
+    # Clean up when done
+    if session_id in terminal_sessions:
+        terminal_sessions.pop(session_id, None)
+        socketio.emit('terminal_closed', {'session_id': session_id})
 
 @socketio.on('terminal_input')
 def handle_terminal_input(data):
+    """Handle terminal input from client"""
     session_id = data.get('session_id', 'default')
     input_data = data.get('input', '')
     
     if session_id in terminal_sessions:
         fd = terminal_sessions[session_id]['fd']
         try:
-            os.write(fd, input_data.encode())
-        except:
-            pass
+            os.write(fd, input_data.encode('utf-8'))
+        except OSError as e:
+            print(f"Terminal input error: {e}")
+            # Terminal might be closed
+            if session_id in terminal_sessions:
+                terminal_sessions.pop(session_id)
+                emit('terminal_closed', {'session_id': session_id})
+        except Exception as e:
+            print(f"Terminal input unexpected error: {e}")
 
 @socketio.on('terminal_resize')
 def handle_terminal_resize(data):
+    """Handle terminal resize from client"""
     session_id = data.get('session_id', 'default')
     rows = data.get('rows', 24)
     cols = data.get('cols', 80)
@@ -1890,21 +1956,32 @@ def handle_terminal_resize(data):
         try:
             winsize = struct.pack('HHHH', rows, cols, 0, 0)
             fcntl.ioctl(fd, termios.TIOCSWINSZ, winsize)
-        except:
-            pass
+        except OSError as e:
+            print(f"Terminal resize error: {e}")
+        except Exception as e:
+            print(f"Terminal resize unexpected error: {e}")
 
 @socketio.on('stop_terminal')
 def handle_stop_terminal(data):
+    """Handle terminal stop from client"""
     session_id = data.get('session_id', 'default')
     
     if session_id in terminal_sessions:
-        session = terminal_sessions.pop(session_id)
+        session_data = terminal_sessions.pop(session_id)
         try:
-            os.close(session['fd'])
-            os.kill(session['pid'], 9)
-            os.waitpid(session['pid'], 0)
-        except:
+            # Close file descriptor
+            os.close(session_data['fd'])
+        except OSError:
             pass
+        
+        try:
+            # Kill process
+            os.kill(session_data['pid'], 9)
+            os.waitpid(session_data['pid'], 0)
+        except (OSError, ProcessLookupError):
+            pass
+        
+        emit('terminal_stopped', {'session_id': session_id})
 
 # --- DOCKER ROUTES ---
 import docker as docker_sdk
