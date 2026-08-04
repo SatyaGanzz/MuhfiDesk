@@ -406,10 +406,85 @@
             box-shadow: 0 0 10px rgba(85,239,196,0.1);
         }
 
-        .modal-actions {
-            display: flex;
-            gap: 1rem;
-            justify-content: flex-end;
+        /* Mobile Responsive Styles for Terminal */
+        .mobile-key-bar {
+            display: none;
+            align-items: center;
+            gap: 0.3rem;
+            background: rgba(15, 17, 26, 0.95);
+            padding: 0.4rem;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .mobile-key-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fff;
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-family: monospace;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .mobile-key-btn:active {
+            background: rgba(85, 239, 196, 0.3);
+            color: #55efc4;
+        }
+        .mobile-key-btn.send-btn {
+            background: #238636;
+            border-color: #2e9b40;
+        }
+        #mobile-cmd-input {
+            flex: 1;
+            min-width: 0;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fff;
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-family: monospace;
+            outline: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.3rem !important;
+                gap: 0.4rem !important;
+                height: 100vh !important;
+            }
+            .header {
+                padding: 0.4rem 0.6rem !important;
+                gap: 0.5rem !important;
+            }
+            .quick-commands {
+                flex-wrap: nowrap !important;
+                overflow-x: auto !important;
+                padding: 0.4rem 0.6rem !important;
+                gap: 0.5rem !important;
+            }
+            .quick-commands::-webkit-scrollbar {
+                display: none;
+            }
+            .cmd-category {
+                flex-shrink: 0 !important;
+            }
+            .terminal-container {
+                flex: 1 !important;
+                min-height: 0 !important;
+            }
+            .settings-bar {
+                padding: 0.4rem 0.6rem !important;
+                font-size: 0.75rem !important;
+                gap: 0.5rem !important;
+            }
+            .settings-bar span:last-child {
+                display: none !important;
+            }
+            .mobile-key-bar {
+                display: flex !important;
+            }
         }
     </style>
     <script src="{{ url_for('static', filename='theme.js') }}"></script>
@@ -495,6 +570,17 @@
 
         <!-- Terminal Area -->
         <div class="terminal-container" id="terminal-container"></div>
+
+        <!-- Mobile Key & Command Toolbar -->
+        <div class="mobile-key-bar" id="mobile-key-bar">
+            <button class="mobile-key-btn" onclick="sendSpecialKey('\x1b')">Esc</button>
+            <button class="mobile-key-btn" onclick="sendSpecialKey('\t')">Tab</button>
+            <button class="mobile-key-btn" onclick="sendSpecialKey('\x03')">Ctrl+C</button>
+            <button class="mobile-key-btn" onclick="sendSpecialKey('\x1b[A')">▲</button>
+            <button class="mobile-key-btn" onclick="sendSpecialKey('\x1b[B')">▼</button>
+            <input type="text" id="mobile-cmd-input" placeholder="Type command..." onkeydown="if(event.key==='Enter') sendMobileCmd()">
+            <button class="mobile-key-btn send-btn" onclick="sendMobileCmd()"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
 
         <!-- Settings -->
         <div class="settings-bar">
@@ -730,6 +816,25 @@ Restart App=systemctl restart myapp"></textarea>
                     input: cmd + '\n'
                 });
             }
+        }
+
+        function sendSpecialKey(key) {
+            if (activeTab && terminals[activeTab] && !isReadOnly) {
+                socket.emit('terminal_input', {
+                    session_id: activeTab,
+                    input: key
+                });
+                if (terminals[activeTab].term) {
+                    terminals[activeTab].term.focus();
+                }
+            }
+        }
+
+        function sendMobileCmd() {
+            const input = document.getElementById('mobile-cmd-input');
+            if (!input || !input.value) return;
+            sendSpecialKey(input.value + '\r');
+            input.value = '';
         }
 
         function changeFontSize(size) {
