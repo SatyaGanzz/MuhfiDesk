@@ -36,6 +36,29 @@
             max-width: 1200px;
             margin: 0 auto;
         }
+        
+        /* Mobile responsive improvements */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+            
+            .header {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+                margin-bottom: 1rem;
+                padding-bottom: 0.5rem;
+            }
+            
+            .header h2 {
+                font-size: 1rem !important;
+            }
+            
+            .header > div {
+                width: 100%;
+                justify-content: center;
+            }
+        }
 
         /* Header */
         .header {

@@ -24,6 +24,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     buildSidebarTree();
     setupDragAndDrop();
+    
+    // Restore sidebar and compact states
+    restoreSidebarState();
+    restoreCompactState();
 
     // Close context menu on click outside
     document.addEventListener('click', (e) => {
@@ -802,8 +806,52 @@ function toggleCompact() {
 }
 
 function toggleSidebar() {
-    document.getElementById('sidebar').classList.toggle('collapsed');
-    document.getElementById('btn-sidebar').classList.toggle('active');
+    const sidebar = document.getElementById('sidebar');
+    const btn = document.getElementById('btn-sidebar');
+    
+    // Toggle collapsed state
+    sidebar.classList.toggle('collapsed');
+    btn.classList.toggle('active');
+    
+    // Save sidebar state to localStorage
+    const isCollapsed = sidebar.classList.contains('collapsed');
+    localStorage.setItem('fm_sidebar_collapsed', isCollapsed);
+}
+
+// Function to restore sidebar state on page load
+function restoreSidebarState() {
+    const savedState = localStorage.getItem('fm_sidebar_collapsed');
+    if (savedState === 'true') {
+        const sidebar = document.getElementById('sidebar');
+        const btn = document.getElementById('btn-sidebar');
+        if (sidebar && btn) {
+            sidebar.classList.add('collapsed');
+            btn.classList.add('active');
+        }
+    }
+}
+
+function toggleCompact() {
+    document.body.classList.toggle('compact');
+    const btn = document.getElementById('btn-compact');
+    if (btn) {
+        btn.classList.toggle('active');
+    }
+    
+    // Save compact state
+    const isCompact = document.body.classList.contains('compact');
+    localStorage.setItem('fm_compact_mode', isCompact);
+}
+
+function restoreCompactState() {
+    const savedState = localStorage.getItem('fm_compact_mode');
+    if (savedState === 'true') {
+        document.body.classList.add('compact');
+        const btn = document.getElementById('btn-compact');
+        if (btn) {
+            btn.classList.add('active');
+        }
+    }
 }
 
 // Editor

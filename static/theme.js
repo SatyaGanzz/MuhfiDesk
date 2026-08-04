@@ -71,9 +71,9 @@ const THEMES = {
 };
 
 const DEFAULT_BG = {
-    dark:          '/static/wallpapers/WAL9.jpg',
+    dark:          '#0f1117', // Solid color instead of wallpaper
     light:         'linear-gradient(135deg, #e0e7ef 0%, #f0f4f8 100%)',
-    glassmorphic:  '/static/wallpapers/WAL9.jpg'
+    glassmorphic:  '#161b22'  // Solid color instead of wallpaper
 };
 
 // ─── Core apply functions ────────────────────────────────────────────────────
@@ -464,7 +464,7 @@ function handleWallpaperUpload(event) {
 // ─── Init ────────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
-    const savedTheme = localStorage.getItem('dashboard_theme') || 'glassmorphic';
+    const savedTheme = localStorage.getItem('dashboard_theme') || 'dark'; // Changed default from glassmorphic to dark
     const customBg   = localStorage.getItem('dashboard_custom_bg');
     
     applyTheme(savedTheme, customBg);

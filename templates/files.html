@@ -28,12 +28,17 @@
             overflow-y: auto;
             flex-shrink: 0;
             padding: 0.5rem;
+            display: block; /* Ensure sidebar is always visible */
+            transition: all 0.3s ease;
+            opacity: 1;
         }
 
         .fm-sidebar.collapsed {
             width: 0;
             padding: 0;
             overflow: hidden;
+            opacity: 0;
+            transition: all 0.3s ease;
         }
 
         .tree-item {
