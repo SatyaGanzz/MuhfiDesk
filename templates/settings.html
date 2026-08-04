@@ -105,6 +105,20 @@
         .btn.secondary {
             background: #21262d;
         }
+        
+        /* Mobile button improvements */
+        @media (max-width: 768px) {
+            .btn {
+                padding: 0.6rem 1rem;
+                font-size: 0.9rem;
+                min-height: 44px;
+                text-align: center;
+            }
+            
+            .btn i {
+                font-size: 1rem;
+            }
+        }
 
         /* Settings Grid */
         .settings-grid {
@@ -159,6 +173,32 @@
             gap: 0.5rem;
             justify-content: flex-end;
         }
+        
+        /* Mobile card adjustments */
+        @media (max-width: 768px) {
+            .card-header {
+                padding: 0.8rem 1rem;
+            }
+            
+            .card-header h3 {
+                font-size: 0.9rem;
+            }
+            
+            .card-body {
+                padding: 1rem;
+            }
+            
+            .card-footer {
+                padding: 0.8rem 1rem;
+                flex-wrap: wrap;
+            }
+            
+            .card-footer .btn {
+                flex: 1;
+                justify-content: center;
+                min-width: 120px;
+            }
+        }
 
         /* Form */
         .form-group {
@@ -191,6 +231,27 @@
         .form-group select:focus {
             outline: none;
             border-color: #58a6ff;
+        }
+        
+        /* Mobile form improvements */
+        @media (max-width: 768px) {
+            .form-group input,
+            .form-group select {
+                padding: 0.8rem 1rem;
+                font-size: 1rem;
+                min-height: 48px;
+                box-sizing: border-box;
+            }
+            
+            .form-group label {
+                font-size: 0.9rem;
+                margin-bottom: 0.5rem;
+            }
+            
+            .form-hint {
+                font-size: 0.8rem;
+                margin-top: 0.4rem;
+            }
         }
 
         .form-row {
@@ -225,6 +286,27 @@
             cursor: pointer;
             border: 2px solid transparent;
             transition: all 0.2s;
+        }
+        
+        /* Mobile color picker improvements */
+        @media (max-width: 768px) {
+            .color-option {
+                width: 42px;
+                height: 42px;
+                border-radius: 8px;
+            }
+        }
+        
+        /* Custom color input styling for mobile */
+        @media (max-width: 768px) {
+            input[type="color"] {
+                width: 100%;
+                height: 50px;
+                border-radius: 8px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                background: transparent;
+                cursor: pointer;
+            }
         }
 
         .color-option:hover {
@@ -546,6 +628,24 @@
             align-items: center;
             gap: 0.4rem;
         }
+        
+        /* Mobile section label improvements */
+        @media (max-width: 768px) {
+            .section-label {
+                font-size: 0.85rem;
+                margin-bottom: 1rem;
+                letter-spacing: 0.05em;
+            }
+            
+            .section-label i {
+                font-size: 1rem;
+            }
+            
+            .bg-section-title {
+                font-size: 0.8rem;
+                margin-bottom: 0.8rem;
+            }
+        }
 
         .theme-cards-row {
             display: grid;
@@ -553,7 +653,10 @@
             gap: 1rem;
         }
         @media (max-width: 700px) {
-            .theme-cards-row { grid-template-columns: 1fr; }
+            .theme-cards-row { 
+                grid-template-columns: 1fr; 
+                gap: 0.8rem;
+            }
         }
 
         .theme-radio-card {
@@ -652,6 +755,18 @@
             grid-template-columns: repeat(8, max-content);
             gap: 0.8rem;
         }
+        
+        @media (max-width: 768px) {
+            .bg-swatches {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 0.6rem;
+            }
+            
+            .bg-preset {
+                width: 100%;
+                height: 50px;
+            }
+        }
         .bg-preset {
             width: 56px;
             height: 56px;
@@ -669,6 +784,13 @@
             grid-template-columns: repeat(3, 1fr);
             gap: 0.8rem;
             margin-bottom: 1.5rem;
+        }
+        
+        @media (max-width: 768px) {
+            .bg-swatches-img {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.6rem;
+            }
         }
         .bg-preset-img {
             width: 100%;
@@ -694,6 +816,27 @@
             transition: all 0.22s ease;
             background: rgba(88,166,255,0.04);
             position: relative;
+        }
+        
+        @media (max-width: 768px) {
+            .wallpaper-dropzone {
+                padding: 1rem;
+                border-radius: 8px;
+            }
+            
+            .dropzone-inner i {
+                font-size: 1.4rem !important;
+                margin-bottom: 0.3rem !important;
+            }
+            
+            .dropzone-inner p {
+                font-size: 0.8rem !important;
+                margin-bottom: 0.1rem !important;
+            }
+            
+            .dropzone-inner span {
+                font-size: 0.7rem !important;
+            }
         }
         .wallpaper-dropzone:hover,
         .wallpaper-dropzone.drag-over {
@@ -736,6 +879,13 @@
             position: relative;
             overflow: hidden;
         }
+        
+        @media (max-width: 768px) {
+            .bg-live-preview {
+                height: 120px;
+                border-radius: 8px;
+            }
+        }
         .bg-live-preview::after {
             content: '';
             position: absolute;
@@ -747,6 +897,41 @@
                 transparent 4px,
                 transparent 12px
             );
+        }
+        
+        /* Range/Slider styling for mobile */
+        @media (max-width: 768px) {
+            input[type="range"] {
+                width: 100%;
+                height: 8px;
+                border-radius: 4px;
+                background: rgba(255, 255, 255, 0.1);
+                outline: none;
+                -webkit-appearance: none;
+                cursor: pointer;
+            }
+            
+            input[type="range"]::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: #58a6ff;
+                cursor: pointer;
+                border: 2px solid #fff;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            }
+            
+            input[type="range"]::-moz-range-thumb {
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: #58a6ff;
+                cursor: pointer;
+                border: 2px solid #fff;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            }
         }
 
         /* ── Server Identity rows ── */
@@ -797,6 +982,67 @@
         /* ── Auto-save Hide Footers ── */
         .card-footer:has(button[onclick^="save"]) {
             display: none !important;
+        }
+        
+        /* Additional mobile improvements */
+        @media (max-width: 768px) {
+            /* Better spacing for mobile */
+            .form-group {
+                margin-bottom: 1.2rem;
+            }
+            
+            /* Toggle styling for mobile */
+            .toggle-row {
+                padding: 1rem 0;
+            }
+            
+            .toggle-label {
+                font-size: 1rem;
+            }
+            
+            .toggle-desc {
+                font-size: 0.85rem;
+                margin-top: 0.2rem;
+            }
+            
+            /* Radio cards for mobile */
+            .radio-cards {
+                flex-direction: column;
+                gap: 0.6rem;
+            }
+            
+            .radio-card {
+                padding: 1.2rem;
+            }
+            
+            .radio-card i {
+                font-size: 1.8rem;
+                margin-bottom: 0.6rem;
+            }
+            
+            .radio-card span {
+                font-size: 0.95rem;
+            }
+            
+            /* Threshold inputs for mobile */
+            .threshold-group {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.4rem;
+                margin-bottom: 1rem;
+            }
+            
+            .threshold-group label {
+                min-width: auto;
+                font-size: 0.9rem;
+            }
+            
+            .threshold-input {
+                width: 100%;
+                padding: 0.6rem 0.8rem;
+                font-size: 0.9rem;
+                text-align: left;
+            }
         }
     </style>
     <script src="{{ url_for('static', filename='theme.js') }}"></script>
