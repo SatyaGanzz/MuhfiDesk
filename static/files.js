@@ -34,6 +34,32 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!e.target.closest('.context-menu')) {
             hideContextMenu();
         }
+        
+        // Close mobile sidebar when clicking outside
+        if (window.innerWidth <= 768) {
+            const sidebar = document.getElementById('sidebar');
+            if (!e.target.closest('.fm-sidebar') && !e.target.closest('#btn-sidebar')) {
+                sidebar.classList.remove('mobile-show');
+                const btn = document.getElementById('btn-sidebar');
+                if (btn) btn.classList.remove('active');
+            }
+        }
+    });
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+        const sidebar = document.getElementById('sidebar');
+        const btn = document.getElementById('btn-sidebar');
+        
+        if (window.innerWidth > 768) {
+            // Switch to desktop mode
+            sidebar.classList.remove('mobile-show');
+            restoreSidebarState(); // Restore desktop state
+        } else {
+            // Switch to mobile mode
+            sidebar.classList.remove('collapsed');
+            restoreSidebarState(); // Restore mobile state
+        }
     });
 
     // Keyboard shortcuts
@@ -43,6 +69,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.ctrlKey && e.key === 'c' && selectedItem) copyItem('copy');
         if (e.ctrlKey && e.key === 'x' && selectedItem) copyItem('cut');
         if (e.ctrlKey && e.key === 'v' && clipboard) pasteItem();
+        
+        // ESC to close mobile sidebar
+        if (e.key === 'Escape' && window.innerWidth <= 768) {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.remove('mobile-show');
+            const btn = document.getElementById('btn-sidebar');
+            if (btn) btn.classList.remove('active');
+        }
     });
 });
 
@@ -809,22 +843,45 @@ function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     const btn = document.getElementById('btn-sidebar');
     
-    // Toggle collapsed state
-    sidebar.classList.toggle('collapsed');
-    btn.classList.toggle('active');
+    // Check if we're on mobile
+    const isMobile = window.innerWidth <= 768;
     
-    // Save sidebar state to localStorage
-    const isCollapsed = sidebar.classList.contains('collapsed');
-    localStorage.setItem('fm_sidebar_collapsed', isCollapsed);
+    if (isMobile) {
+        // Mobile behavior - toggle mobile-show class
+        sidebar.classList.toggle('mobile-show');
+        btn.classList.toggle('active');
+        
+        // Save mobile sidebar state
+        const isShowing = sidebar.classList.contains('mobile-show');
+        localStorage.setItem('fm_mobile_sidebar_show', isShowing);
+    } else {
+        // Desktop behavior - toggle collapsed class
+        sidebar.classList.toggle('collapsed');
+        btn.classList.toggle('active');
+        
+        // Save desktop sidebar state
+        const isCollapsed = sidebar.classList.contains('collapsed');
+        localStorage.setItem('fm_sidebar_collapsed', isCollapsed);
+    }
 }
 
 // Function to restore sidebar state on page load
 function restoreSidebarState() {
-    const savedState = localStorage.getItem('fm_sidebar_collapsed');
-    if (savedState === 'true') {
-        const sidebar = document.getElementById('sidebar');
-        const btn = document.getElementById('btn-sidebar');
-        if (sidebar && btn) {
+    const isMobile = window.innerWidth <= 768;
+    const sidebar = document.getElementById('sidebar');
+    const btn = document.getElementById('btn-sidebar');
+    
+    if (isMobile) {
+        // Mobile - restore mobile-show state
+        const savedState = localStorage.getItem('fm_mobile_sidebar_show');
+        if (savedState === 'true') {
+            sidebar.classList.add('mobile-show');
+            btn.classList.add('active');
+        }
+    } else {
+        // Desktop - restore collapsed state
+        const savedState = localStorage.getItem('fm_sidebar_collapsed');
+        if (savedState === 'true') {
             sidebar.classList.add('collapsed');
             btn.classList.add('active');
         }

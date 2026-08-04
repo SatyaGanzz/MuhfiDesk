@@ -5,12 +5,15 @@
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Files - MuhfiDesk</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=5">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=6">
     <style>
         /* File Manager Specific Styles */
         .fm-container {
@@ -637,17 +640,45 @@
 
         /* Responsive Mobile Layout */
         @media (max-width: 768px) {
+            body {
+                font-size: 14px;
+            }
+            
             .app-container {
                 padding: 0.3rem !important;
             }
+            
             header {
                 margin-bottom: 0.3rem !important;
+                flex-wrap: wrap;
+            }
+            
+            header h2 {
+                font-size: 1rem !important;
+                order: 1;
+                flex: 1;
+            }
+            
+            header .btn {
+                min-height: 44px;
+                padding: 0.6rem 1rem;
+                font-size: 0.9rem;
+            }
+            
+            header > div:last-child {
+                order: 2;
+                width: 100%;
+                justify-content: center;
+                margin-left: 0 !important;
+                margin-top: 0.5rem;
+                gap: 0.5rem;
             }
             .fm-container {
                 position: relative;
-                height: calc(100vh - 65px);
+                height: calc(100vh - 100px);
                 border-radius: 8px;
             }
+            
             .fm-sidebar {
                 position: fixed;
                 top: 0;
@@ -659,57 +690,76 @@
                 -webkit-backdrop-filter: blur(16px);
                 transition: transform 0.3s ease;
                 transform: translateX(-100%);
-                width: 270px;
+                width: 280px;
                 padding: 1rem 0.5rem;
                 border-right: 1px solid rgba(255, 255, 255, 0.15);
                 box-shadow: 8px 0 32px rgba(0,0,0,0.6);
             }
-            /* When sidebar toggle is clicked on mobile, we can toggle .show class */
+            
+            /* When sidebar toggle is clicked on mobile, we can toggle .mobile-show class */
             .fm-sidebar.mobile-show {
                 transform: translateX(0) !important;
             }
+            
             .fm-sidebar.collapsed {
-                width: 270px !important;
-                padding: 1rem 0.5rem !important;
-                overflow-y: auto !important;
+                transform: translateX(-100%) !important;
             }
             .fm-header {
-                padding: 0.4rem 0.6rem;
-                gap: 0.4rem;
+                padding: 0.6rem 0.8rem;
+                gap: 0.6rem;
                 flex-wrap: wrap;
             }
+            
             .fm-breadcrumbs {
                 width: 100%;
                 overflow-x: auto;
                 white-space: nowrap;
                 flex-wrap: nowrap;
-                padding-bottom: 0.2rem;
-                font-size: 0.8rem;
+                padding-bottom: 0.3rem;
+                font-size: 0.85rem;
             }
+            
             .fm-header > div:has(#search-input) {
                 width: 100%;
+                margin-top: 0.5rem;
             }
+            
             #search-input {
                 width: 100% !important;
                 box-sizing: border-box;
+                padding: 0.6rem 0.8rem !important;
+                font-size: 0.9rem !important;
+                min-height: 44px;
             }
             /* Row of action buttons horizontal scrollable */
             .fm-header-actions {
                 display: flex;
                 align-items: center;
-                gap: 0.4rem;
+                gap: 0.5rem;
                 width: 100%;
                 overflow-x: auto;
-                padding-bottom: 2px;
+                padding-bottom: 0.2rem;
+                margin-top: 0.5rem;
             }
+            
             .fm-header-actions::-webkit-scrollbar {
                 display: none;
             }
-            .fm-header > button, .fm-header-actions > button {
-                width: auto !important;
+            
+            .fm-header > button, 
+            .fm-header-actions > button {
+                min-width: 44px !important;
+                min-height: 44px !important;
                 flex-shrink: 0;
-                padding: 0.4rem 0.6rem;
-                font-size: 0.8rem;
+                padding: 0.6rem 0.8rem !important;
+                font-size: 0.85rem !important;
+                white-space: nowrap;
+            }
+            
+            .fm-btn {
+                min-height: 44px;
+                padding: 0.6rem 1rem;
+                font-size: 0.9rem;
             }
             #grid-zoom-container {
                 display: none !important;
@@ -725,9 +775,66 @@
                 gap: 0.5rem;
                 padding: 0.5rem;
             }
+            
+            /* Better table styling for mobile */
+            .fm-table {
+                font-size: 0.85rem;
+            }
+            
+            .fm-table td, .fm-table th {
+                padding: 0.6rem 0.5rem;
+            }
+            
+            .fm-table td:first-child {
+                padding-left: 0.8rem;
+            }
+            
+            /* Status bar improvements */
+            .fm-status {
+                font-size: 0.8rem;
+                padding: 0.5rem 0.8rem;
+                flex-direction: column;
+                gap: 0.2rem;
+                text-align: center;
+            }
+            
+            /* Context menu mobile friendly */
+            .context-menu {
+                min-width: 180px;
+                border-radius: 12px;
+            }
+            
+            .ctx-item {
+                padding: 0.8rem 1.2rem;
+                font-size: 1rem;
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+            }
         }
     </style>
     <script src="{{ url_for('static', filename='theme.js') }}"></script>
+    <script>
+        // Critical mobile CSS injection
+        if (window.innerWidth <= 768) {
+            const mobileCriticalCSS = `
+                @media (max-width: 768px) {
+                    body { font-size: 14px !important; }
+                    .app-container { padding: 0.3rem !important; }
+                    .fm-btn { min-height: 44px !important; padding: 0.6rem 1rem !important; font-size: 0.9rem !important; }
+                    .fm-header { padding: 0.6rem 0.8rem !important; }
+                    #search-input { min-height: 44px !important; padding: 0.6rem 0.8rem !important; }
+                    .fm-sidebar { position: fixed !important; transform: translateX(-100%) !important; width: 280px !important; z-index: 10000 !important; }
+                    .fm-sidebar.mobile-show { transform: translateX(0) !important; }
+                    header { flex-wrap: wrap !important; }
+                    header > div:last-child { width: 100% !important; justify-content: center !important; margin-left: 0 !important; margin-top: 0.5rem !important; }
+                }
+            `;
+            const style = document.createElement('style');
+            style.textContent = mobileCriticalCSS;
+            document.head.appendChild(style);
+        }
+    </script>
     <script>
         function updateGridZoom(value) {
             const grid = document.getElementById('file-grid');
@@ -759,6 +866,20 @@
                     slider.value = savedZoom;
                     updateGridZoom(savedZoom);
                 }
+            }
+        });
+    </script>
+    <script>
+        // Force cache clear for mobile CSS
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.innerWidth <= 768) {
+                const timestamp = Date.now();
+                const styleSheets = document.querySelectorAll('link[rel="stylesheet"]');
+                styleSheets.forEach(link => {
+                    if (link.href.includes('style.css')) {
+                        link.href = link.href.split('?')[0] + '?v=' + timestamp;
+                    }
+                });
             }
         });
     </script>
