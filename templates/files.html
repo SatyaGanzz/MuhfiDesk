@@ -299,15 +299,30 @@
             display: inline-flex;
             align-items: center;
             gap: 0.4rem;
+            transition: all 0.2s ease;
         }
 
-        .fm-btn:hover {
+        .fm-btn:hover:not(:disabled) {
             background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
         }
 
         .fm-btn.active {
             background: rgba(100, 150, 255, 0.2);
             border-color: rgba(100, 150, 255, 0.3);
+        }
+
+        .fm-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.05);
+            transform: none;
+        }
+
+        .fm-btn:disabled:hover {
+            background: rgba(255, 255, 255, 0.03);
+            transform: none;
         }
 
         /* Status Bar */
@@ -731,16 +746,18 @@
                 font-size: 0.9rem !important;
                 min-height: 44px;
             }
-            /* Row of action buttons horizontal scrollable */
-            .fm-header-actions {
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                width: 100%;
-                overflow-x: auto;
-                padding-bottom: 0.2rem;
-                margin-top: 0.5rem;
-            }
+        .fm-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: nowrap;
+            overflow: visible; /* Remove overflow scroll */
+        }
+
+        /* Remove scrollbar from mobile */
+        .fm-header-actions::-webkit-scrollbar {
+            display: none;
+        }
             
             .fm-header-actions::-webkit-scrollbar {
                 display: none;
@@ -922,25 +939,43 @@
                             onkeyup="filterFiles(this.value)">
                         <button class="fm-btn" onclick="clearSearch()"><i class="fa-solid fa-xmark"></i></button>
                     </div>
-                    <div class="fm-header-actions">
+                    <div class="fm-header-actions" style="display:flex; align-items:center; gap:0.5rem; flex-wrap:nowrap;">
+                        <!-- File Operations -->
                         <button class="fm-btn" onclick="createNew('folder')" title="New Folder"><i class="fa-solid fa-folder-plus"></i></button>
-                        <button class="fm-btn" onclick="createNew('file')" title="New File"><i class="fa-solid fa-file-circle-plus"></i></button>
+                        <button class="fm-btn" onclick="createNew('file')" title="New File"><i class="fa-solid fa-file-plus"></i></button>
                         <button class="fm-btn" onclick="loadFiles(currentPath)" title="Refresh"><i class="fa-solid fa-rotate-right"></i></button>
                         
-                        <div id="grid-zoom-container" style="display:flex; align-items:center; gap:0.5rem; margin:0 0.5rem;">
-                            <i class="fa-solid fa-magnifying-glass-minus" style="font-size:0.8rem; color:var(--text-muted)"></i>
-                            <input type="range" id="grid-zoom" min="80" max="250" value="110" style="width:70px; cursor:pointer;" oninput="updateGridZoom(this.value)">
-                            <i class="fa-solid fa-magnifying-glass-plus" style="font-size:0.8rem; color:var(--text-muted)"></i>
-                        </div>
-
+                        <!-- Separator -->
+                        <div style="width:1px; height:24px; background:rgba(255,255,255,0.1); margin:0 0.3rem;"></div>
+                        
+                        <!-- Clipboard Operations -->
+                        <button class="fm-btn" onclick="copyItem('cut')" title="Cut" id="btn-cut" disabled><i class="fa-solid fa-scissors"></i></button>
+                        <button class="fm-btn" onclick="copyItem('copy')" title="Copy" id="btn-copy" disabled><i class="fa-solid fa-copy"></i></button>
+                        <button class="fm-btn" onclick="pasteItem()" title="Paste" id="btn-paste" disabled><i class="fa-solid fa-paste"></i></button>
+                        
+                        <!-- Separator -->
+                        <div style="width:1px; height:24px; background:rgba(255,255,255,0.1); margin:0 0.3rem;"></div>
+                        
+                        <!-- View Options with Zoom -->
                         <button class="fm-btn active" id="btn-view-list" onclick="setDisplayFormat('list')" title="List View"><i class="fa-solid fa-list"></i></button>
                         <button class="fm-btn" id="btn-view-grid" onclick="setDisplayFormat('grid')" title="Grid View"><i class="fa-solid fa-border-all"></i></button>
+                        
+                        <!-- Hidden Zoom Control (accessible via right-click or settings) -->
+                        <div id="grid-zoom-container" style="display:none; align-items:center; gap:0.3rem;">
+                            <i class="fa-solid fa-magnifying-glass-minus" style="font-size:0.7rem; color:var(--text-muted)"></i>
+                            <input type="range" id="grid-zoom" min="80" max="250" value="110" style="width:50px; cursor:pointer;" oninput="updateGridZoom(this.value)">
+                            <i class="fa-solid fa-magnifying-glass-plus" style="font-size:0.7rem; color:var(--text-muted)"></i>
+                        </div>
 
+                        <!-- Separator -->
+                        <div style="width:1px; height:24px; background:rgba(255,255,255,0.1); margin:0 0.3rem;"></div>
+                        
+                        <!-- Upload/Download -->
                         <input type="file" id="upload-input" multiple style="display:none" onchange="uploadFiles(this.files)">
-                        <button class="fm-btn" onclick="document.getElementById('upload-input').click()" style="background:#238636">
-                            <i class="fa-solid fa-upload"></i> Upload
+                        <button class="fm-btn" onclick="document.getElementById('upload-input').click()" title="Upload Files" style="background:#238636">
+                            <i class="fa-solid fa-upload"></i>
                         </button>
-                        <button class="fm-btn" onclick="downloadSelected()"><i class="fa-solid fa-download"></i></button>
+                        <button class="fm-btn" onclick="downloadSelected()" title="Download Selected" id="btn-download" disabled><i class="fa-solid fa-download"></i></button>
                     </div>
                 </div>
 

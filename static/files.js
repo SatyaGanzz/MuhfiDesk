@@ -28,6 +28,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Restore sidebar and compact states
     restoreSidebarState();
     restoreCompactState();
+    
+    // Initialize toolbar button states
+    updateToolbarButtonStates();
 
     // Close context menu on click outside
     document.addEventListener('click', (e) => {
@@ -69,6 +72,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.ctrlKey && e.key === 'c' && selectedItem) copyItem('copy');
         if (e.ctrlKey && e.key === 'x' && selectedItem) copyItem('cut');
         if (e.ctrlKey && e.key === 'v' && clipboard) pasteItem();
+        if (e.key === 'F5') {
+            e.preventDefault();
+            loadFiles(currentPath);
+        }
         
         // ESC to close mobile sidebar
         if (e.key === 'Escape' && window.innerWidth <= 768) {
@@ -76,6 +83,14 @@ document.addEventListener('DOMContentLoaded', () => {
             sidebar.classList.remove('mobile-show');
             const btn = document.getElementById('btn-sidebar');
             if (btn) btn.classList.remove('active');
+        }
+        
+        // ESC to clear selection
+        if (e.key === 'Escape') {
+            selectedItems = [];
+            selectedItem = null;
+            document.querySelectorAll('.fm-table tr, .grid-item').forEach(r => r.classList.remove('selected'));
+            updateToolbarButtonStates();
         }
     });
 });
@@ -472,6 +487,34 @@ function selectRow(tr, item, e) {
         selectedItem = item;
         selectedItems = [item];
     }
+    
+    // Update button states after selection change
+    updateToolbarButtonStates();
+}
+            tr.classList.add('selected');
+            if (grid && grid.children[index]) grid.children[index].classList.add('selected');
+        }
+        selectedItem = selectedItems.length > 0 ? selectedItems[selectedItems.length - 1] : null;
+    } else {
+        document.querySelectorAll('.fm-table tr, .grid-item').forEach(r => r.classList.remove('selected'));
+        tr.classList.add('selected');
+        const index = Array.from(tr.parentNode.children).indexOf(tr);
+        const grid = document.getElementById('file-grid');
+        if (grid && grid.children[index]) {
+            grid.children[index].classList.add('selected');
+        }
+        selectedItem = item;
+        selectedItems = [item];
+    }
+    if (e && e.button === 2 && !selectedItems.find(i => i.path === item.path)) {
+        document.querySelectorAll('.fm-table tr, .grid-item').forEach(r => r.classList.remove('selected'));
+        tr.classList.add('selected');
+        const index = Array.from(tr.parentNode.children).indexOf(tr);
+        const grid = document.getElementById('file-grid');
+        if (grid && grid.children[index]) grid.children[index].classList.add('selected');
+        selectedItem = item;
+        selectedItems = [item];
+    }
 }
 
 function selectGridItem(div, item, e) {
@@ -509,6 +552,9 @@ function selectGridItem(div, item, e) {
         selectedItem = item;
         selectedItems = [item];
     }
+    
+    // Update button states after selection change
+    updateToolbarButtonStates();
 }
 
 function setDisplayFormat(mode) {
@@ -527,6 +573,41 @@ function setDisplayFormat(mode) {
     } else {
         if (table) table.style.display = 'table';
         if (grid) grid.style.display = 'none';
+    }
+}
+
+function updateToolbarButtonStates() {
+    const hasSelection = selectedItems.length > 0;
+    const hasClipboard = clipboard !== null;
+    
+    // Enable/disable buttons based on selection
+    const btnCut = document.getElementById('btn-cut');
+    const btnCopy = document.getElementById('btn-copy');
+    const btnPaste = document.getElementById('btn-paste');
+    const btnDownload = document.getElementById('btn-download');
+    
+    if (btnCut) {
+        btnCut.disabled = !hasSelection;
+        btnCut.style.opacity = hasSelection ? '1' : '0.5';
+        btnCut.style.cursor = hasSelection ? 'pointer' : 'not-allowed';
+    }
+    
+    if (btnCopy) {
+        btnCopy.disabled = !hasSelection;
+        btnCopy.style.opacity = hasSelection ? '1' : '0.5';
+        btnCopy.style.cursor = hasSelection ? 'pointer' : 'not-allowed';
+    }
+    
+    if (btnPaste) {
+        btnPaste.disabled = !hasClipboard;
+        btnPaste.style.opacity = hasClipboard ? '1' : '0.5';
+        btnPaste.style.cursor = hasClipboard ? 'pointer' : 'not-allowed';
+    }
+    
+    if (btnDownload) {
+        btnDownload.disabled = !hasSelection;
+        btnDownload.style.opacity = hasSelection ? '1' : '0.5';
+        btnDownload.style.cursor = hasSelection ? 'pointer' : 'not-allowed';
     }
 }
 
@@ -743,6 +824,21 @@ function copyItem(op) {
     hideContextMenu();
     if (selectedItems.length === 0) return;
     clipboard = { paths: selectedItems.map(i => i.path), op: op };
+    
+    // Update button states after clipboard change
+    updateToolbarButtonStates();
+    
+    // Visual feedback
+    const btnCut = document.getElementById('btn-cut');
+    const btnCopy = document.getElementById('btn-copy');
+    if (op === 'cut' && btnCut) {
+        btnCut.style.background = 'rgba(255, 182, 193, 0.2)';
+        setTimeout(() => btnCut.style.background = '', 2000);
+    }
+    if (op === 'copy' && btnCopy) {
+        btnCopy.style.background = 'rgba(173, 216, 230, 0.2)';
+        setTimeout(() => btnCopy.style.background = '', 2000);
+    }
 }
 
 async function pasteItem() {
@@ -804,6 +900,7 @@ async function pasteItem() {
                                     widget.classList.replace('active', 'hiding');
                                     document.getElementById('cp-progress-bar').classList.remove('success');
                                     clipboard = null;
+                                    updateToolbarButtonStates(); // Update button states
                                     loadFiles(currentPath);
                                 }, 2000);
                             } else if (data.status === 'error') {
@@ -813,6 +910,7 @@ async function pasteItem() {
                         } else {
                             if (data.status === 'done' || data.status === 'error') {
                                 clipboard = null;
+                                updateToolbarButtonStates(); // Update button states
                                 loadFiles(currentPath);
                             }
                         }
