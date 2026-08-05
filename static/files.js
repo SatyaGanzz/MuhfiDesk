@@ -491,33 +491,9 @@ function selectRow(tr, item, e) {
     // Update button states after selection change
     updateToolbarButtonStates();
 }
-            tr.classList.add('selected');
-            if (grid && grid.children[index]) grid.children[index].classList.add('selected');
-        }
-        selectedItem = selectedItems.length > 0 ? selectedItems[selectedItems.length - 1] : null;
-    } else {
-        document.querySelectorAll('.fm-table tr, .grid-item').forEach(r => r.classList.remove('selected'));
-        tr.classList.add('selected');
-        const index = Array.from(tr.parentNode.children).indexOf(tr);
-        const grid = document.getElementById('file-grid');
-        if (grid && grid.children[index]) {
-            grid.children[index].classList.add('selected');
-        }
-        selectedItem = item;
-        selectedItems = [item];
-    }
-    if (e && e.button === 2 && !selectedItems.find(i => i.path === item.path)) {
-        document.querySelectorAll('.fm-table tr, .grid-item').forEach(r => r.classList.remove('selected'));
-        tr.classList.add('selected');
-        const index = Array.from(tr.parentNode.children).indexOf(tr);
-        const grid = document.getElementById('file-grid');
-        if (grid && grid.children[index]) grid.children[index].classList.add('selected');
-        selectedItem = item;
-        selectedItems = [item];
-    }
-}
 
 function selectGridItem(div, item, e) {
+
     if (e && (e.ctrlKey || e.metaKey)) {
         const idx = selectedItems.findIndex(i => i.path === item.path);
         const index = Array.from(div.parentNode.children).indexOf(div);
