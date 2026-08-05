@@ -706,28 +706,33 @@
             .fm-header > div:has(#search-input) {
                 width: 100%;
                 margin-top: 0.5rem;
+                display: flex;
+                gap: 0.5rem;
             }
             
             #search-input {
-                width: 100% !important;
+                flex: 1 !important;
+                width: auto !important;
                 box-sizing: border-box;
                 padding: 0.6rem 0.8rem !important;
                 font-size: 0.9rem !important;
                 min-height: 44px;
             }
-        .fm-header-actions {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            flex-wrap: nowrap;
-            overflow: visible; /* Remove overflow scroll */
-        }
-
-        /* Remove scrollbar from mobile */
-        .fm-header-actions::-webkit-scrollbar {
-            display: none;
-        }
             
+            .fm-header-actions {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                flex-wrap: nowrap;
+                overflow-x: auto; /* Allow overflow scroll */
+                width: 100%;
+                padding-bottom: 0.5rem;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none; /* Firefox */
+                -ms-overflow-style: none; /* IE/Edge */
+            }
+
+            /* Remove scrollbar from mobile */
             .fm-header-actions::-webkit-scrollbar {
                 display: none;
             }
