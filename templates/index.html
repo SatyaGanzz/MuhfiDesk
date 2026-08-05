@@ -16,6 +16,70 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=16">
     <script src="{{ url_for('static', filename='theme.js') }}?v=2"></script>
     <style>
+        /* Background */
+        body {
+            background: #0f1115;
+            min-height: 100vh;
+            overflow-x: hidden;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .wallpaper {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            background-size: cover;
+            background-position: center;
+            filter: brightness(0.7) blur(2px);
+            transform: scale(1.05); /* Prevent blurred edges */
+        }
+
+        .app-container.glass {
+            flex: 1;
+            background: transparent !important;
+            backdrop-filter: none !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+        .glass {
+            background: rgba(20, 25, 35, 0.45) !important;
+            backdrop-filter: blur(25px) saturate(150%) !important;
+            -webkit-backdrop-filter: blur(25px) saturate(150%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+        }
+        
+        .top-bar.glass {
+            background: rgba(15, 20, 30, 0.6) !important;
+        }
+
+        .widget-card {
+            background: rgba(20, 25, 35, 0.5) !important;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s;
+        }
+
+        .widget-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.15) !important;
+            background: rgba(30, 35, 45, 0.6) !important;
+        }
+
+        .app-item.glass {
+            background: rgba(30, 35, 45, 0.4) !important;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .app-item.glass:hover {
+            background: rgba(45, 55, 70, 0.6) !important;
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(255,255,255,0.2) !important;
+        }
+        
         /* Logout Modal */
         .logout-overlay {
             position: fixed;
@@ -346,11 +410,11 @@
 </head>
 
 <body>
-    <div class="wallpaper"></div>
+    <div class="wallpaper" id="dynamic-wallpaper" style="background-image: url('{{ url_for('static', filename='wallpapers/WAL9.jpg') }}')"></div>
 
-    <div class="app-container">
+    <div class="app-container glass" style="margin: 0; padding: 0.5rem; max-width: none; border-radius: 0;">
         <!-- Header -->
-        <header class="top-bar">
+        <header class="top-bar glass" style="margin: 1rem 2rem; border-radius: 12px; padding: 0.8rem 1.5rem;">
             <div class="clock-widget">
                 <h1 id="clock-time">00:00</h1>
                 <span id="clock-date">Mon, Jan 1</span>
@@ -379,7 +443,7 @@
         </header>
 
         <!-- Main Content -->
-        <main>
+        <main style="padding: 1rem 2rem;">
             <!-- System Widgets -->
             <div class="widgets-area">
                 <!-- CPU Widget -->
@@ -636,19 +700,20 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             VanillaTilt.init(document.querySelectorAll(".widget-card.glass"), {
+                max: 8,
+                speed: 400,
+                glare: true,
+                "max-glare": 0.1,
+                scale: 1.02
+            });
+            
+            // Also apply to app icons if they exist
+            VanillaTilt.init(document.querySelectorAll(".app-item.glass"), {
                 max: 12,
                 speed: 400,
                 glare: true,
                 "max-glare": 0.15,
-                scale: 1.03
-            });
-            
-            // Also apply to app icons if they exist
-            VanillaTilt.init(document.querySelectorAll(".app-icon"), {
-                max: 15,
-                speed: 400,
-                glare: true,
-                "max-glare": 0.2
+                scale: 1.05
             });
 
             // Load Docker status on page load
@@ -666,7 +731,6 @@
                 
                 const containerList = Array.isArray(data) ? data : (data.containers || []);
                 updateDockerWidget(containerList);
-                updateDockerPanel(containerList);
             } catch (error) {
                 console.error('Failed to fetch docker status:', error);
             }
