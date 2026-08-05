@@ -1341,6 +1341,37 @@ def list_files():
     # === LOCAL FILESYSTEM ===
     # Normalize path separators for cross-platform
     path = os.path.normpath(path)
+    
+    # Check drives pseudo-path first
+    if path == 'drives://' or path == 'drives:\\' or path == 'drives:':
+        # Create a mock response dictionary with the structure expected by the frontend
+        drives_response = list_drives().get_json()
+        if 'error' in drives_response:
+             return jsonify(drives_response), 500
+             
+        items = []
+        for drive in drives_response.get('drives', []):
+             items.append({
+                  'name': drive['mountpoint'],
+                  'path': drive['mountpoint'],
+                  'is_dir': True,
+                  'size': _fmt_size(drive.get('total', 0)),
+                  'date': '-',
+                  'perm': drive.get('fstype', '-'),
+                  'uid': '-',
+                  'gid': '-',
+                  'raw_size': drive.get('total', 0),
+                  'raw_date': 0,
+                  'raw_name': drive['mountpoint'].lower()
+             })
+             
+        return jsonify({
+            'current_path': 'drives://',
+            'items': items,
+            'total': len(items),
+            'has_more': False,
+            'page': 1
+        })
 
     blocked = require_safe_path_for_role(path, 'list')
     if blocked:
