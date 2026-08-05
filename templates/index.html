@@ -47,37 +47,37 @@
             box-shadow: none !important;
         }
         .glass {
-            background: rgba(20, 25, 35, 0.45) !important;
+            background: var(--glass-bg, rgba(20, 25, 35, 0.45)) !important;
             backdrop-filter: blur(25px) saturate(150%) !important;
             -webkit-backdrop-filter: blur(25px) saturate(150%) !important;
-            border: 1px solid rgba(255, 255, 255, 0.08) !important;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+            border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08)) !important;
+            box-shadow: var(--shadow, 0 8px 32px rgba(0, 0, 0, 0.3)) !important;
         }
         
         .top-bar.glass {
-            background: rgba(15, 20, 30, 0.6) !important;
+            background: var(--top-bar-bg, rgba(15, 20, 30, 0.6)) !important;
         }
 
         .widget-card {
-            background: rgba(20, 25, 35, 0.5) !important;
+            background: var(--glass-bg, rgba(20, 25, 35, 0.5)) !important;
             transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s;
         }
 
         .widget-card:hover {
             transform: translateY(-5px) scale(1.02);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.15) !important;
-            background: rgba(30, 35, 45, 0.6) !important;
+            box-shadow: var(--shadow-lg, 0 15px 40px rgba(0,0,0,0.5)), inset 0 0 0 1px var(--glass-highlight, rgba(255,255,255,0.15)) !important;
+            background: var(--glass-highlight, rgba(30, 35, 45, 0.6)) !important;
         }
 
         .app-item.glass {
-            background: rgba(30, 35, 45, 0.4) !important;
+            background: var(--glass-bg, rgba(30, 35, 45, 0.4)) !important;
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
         .app-item.glass:hover {
-            background: rgba(45, 55, 70, 0.6) !important;
+            background: var(--glass-highlight, rgba(45, 55, 70, 0.6)) !important;
             transform: translateY(-5px) scale(1.05);
-            box-shadow: 0 12px 30px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(255,255,255,0.2) !important;
+            box-shadow: var(--shadow-lg, 0 12px 30px rgba(0,0,0,0.4)), inset 0 0 0 1px var(--glass-highlight, rgba(255,255,255,0.2)) !important;
         }
         
         /* Logout Modal */

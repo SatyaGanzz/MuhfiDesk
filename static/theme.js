@@ -72,7 +72,7 @@ const THEMES = {
 
 const DEFAULT_BG = {
     dark:          '#0f1117', // Solid color instead of wallpaper
-    light:         'linear-gradient(135deg, #e0e7ef 0%, #f0f4f8 100%)',
+    light:         '/static/wallpapers/WAL5.jpg',
     glassmorphic:  '#161b22'  // Solid color instead of wallpaper
 };
 
@@ -93,12 +93,13 @@ function applyThemeVars(themeName) {
     }
 
     // Also update body classes so specific rules (like light mode overrides) work properly
+    const className = `theme-${themeName}`;
     if (document.body) {
-        document.body.className = `theme-${themeName}`;
+        document.body.className = className;
     } else {
         // If body not ready yet, wait for DOMContentLoaded
         document.addEventListener('DOMContentLoaded', () => {
-            document.body.className = `theme-${themeName}`;
+            document.body.className = className;
         });
     }
 }
@@ -463,11 +464,22 @@ function handleWallpaperUpload(event) {
 
 // ─── Init ────────────────────────────────────────────────────────────────────
 
+// Apply immediately to prevent FOUC (glitch flash)
+(function() {
+    try {
+        const savedTheme = localStorage.getItem('dashboard_theme') || 'dark';
+        const customBg   = localStorage.getItem('dashboard_custom_bg');
+        applyTheme(savedTheme, customBg);
+    } catch(e) {
+        console.error('Theme init error:', e);
+    }
+})();
+
 document.addEventListener('DOMContentLoaded', () => {
-    const savedTheme = localStorage.getItem('dashboard_theme') || 'dark'; // Changed default from glassmorphic to dark
+    const savedTheme = localStorage.getItem('dashboard_theme') || 'dark';
     const customBg   = localStorage.getItem('dashboard_custom_bg');
     
-    applyTheme(savedTheme, customBg);
+    applyTheme(savedTheme, customBg); // Re-apply in case body classes were missed
     updateThemeSwitcherUI(savedTheme);
     
     // Trigger localization
