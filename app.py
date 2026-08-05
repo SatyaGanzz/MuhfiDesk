@@ -1611,22 +1611,55 @@ def get_drives():
     drives = []
 
     try:
-        import psutil
-        seen_devices = set()
-        for part in psutil.disk_partitions(all=False):
-            # Skip loop, snap, overlay, docker internals, and config file mounts
-            if 'loop' in part.device or 'snap' in part.mountpoint or 'overlay' in part.mountpoint:
+        is_linux = platform.system() == 'Linux'
+
+        # Filesystem types that are NEVER real storage
+        SKIP_FSTYPES = {
+            'squashfs', 'tmpfs', 'devtmpfs', 'devpts', 'proc', 'sysfs',
+            'cgroup', 'cgroup2', 'pstore', 'securityfs', 'debugfs',
+            'tracefs', 'bpf', 'fusectl', 'hugetlbfs', 'mqueue',
+            'configfs', 'ramfs', 'nsfs', 'rpc_pipefs',
+        }
+
+        # On Linux, overlay at '/' IS real storage (Docker/Codespaces root)
+        # So we only skip overlay/aufs if they are NOT mounted at '/'
+        def should_skip_fstype(fstype, mountpoint):
+            if fstype in SKIP_FSTYPES:
+                return True
+            # Skip overlay mounts that are NOT the root fs
+            if fstype in ('overlay', 'aufs') and mountpoint != '/':
+                return True
+            return False
+
+        # Mountpoint prefixes that are always virtual
+        SKIP_MOUNT_PREFIXES = ('/proc/', '/sys/', '/dev/', '/run/user/', '/snap/')
+        SKIP_MOUNT_EXACT = {
+            '/proc', '/sys', '/dev', '/run',
+            '/etc/resolv.conf', '/etc/hostname', '/etc/hosts',
+        }
+
+        seen_mountpoints = set()
+
+        for part in psutil.disk_partitions(all=is_linux):
+            mp = part.mountpoint
+            if not mp or mp in seen_mountpoints:
                 continue
-            if part.mountpoint in ('/etc/resolv.conf', '/etc/hostname', '/etc/hosts'):
+            if should_skip_fstype(part.fstype, mp):
                 continue
-            if part.device in seen_devices:
+            if any(mp.startswith(p) for p in SKIP_MOUNT_PREFIXES):
                 continue
-            seen_devices.add(part.device)
-            
+            if mp in SKIP_MOUNT_EXACT:
+                continue
+            # Skip loop devices (snap packages etc.)
+            if is_linux and part.device.startswith('/dev/loop'):
+                continue
+
+            seen_mountpoints.add(mp)
+
             try:
-                usage = psutil.disk_usage(part.mountpoint)
+                usage = psutil.disk_usage(mp)
                 drives.append({
-                    'mountpoint': part.mountpoint,
+                    'mountpoint': mp,
                     'device': part.device,
                     'fstype': part.fstype,
                     'total': usage.total,
@@ -1634,15 +1667,42 @@ def get_drives():
                     'used': usage.used,
                     'percent': usage.percent
                 })
-            except:
+            except (PermissionError, OSError):
+                # Still list the mount even if we can't stat it
                 drives.append({
-                    'mountpoint': part.mountpoint,
+                    'mountpoint': mp,
                     'device': part.device,
                     'fstype': part.fstype,
+                    'total': 0, 'free': 0, 'used': 0, 'percent': 0
                 })
+
+        # Fallback: always guarantee '/' appears on Linux
+        if is_linux and not any(d['mountpoint'] == '/' for d in drives):
+            try:
+                usage = psutil.disk_usage('/')
+                drives.insert(0, {
+                    'mountpoint': '/',
+                    'device': 'rootfs',
+                    'fstype': 'ext4',
+                    'total': usage.total,
+                    'free': usage.free,
+                    'used': usage.used,
+                    'percent': usage.percent
+                })
+            except Exception:
+                drives.insert(0, {
+                    'mountpoint': '/',
+                    'device': 'rootfs',
+                    'fstype': 'ext4',
+                    'total': 0, 'free': 0, 'used': 0, 'percent': 0
+                })
+
+        # Sort: root first, then alphabetical
+        drives.sort(key=lambda d: (d['mountpoint'] != '/', d['mountpoint']))
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-        
+
     return jsonify({'drives': drives})
 
 @app.route('/api/files/action', methods=['POST'])
