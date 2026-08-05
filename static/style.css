@@ -64,8 +64,7 @@ body {
 
 /* ─── Light-mode overrides ───────────────────────────────────────── */
 body.theme-light .glass:hover {
-    background: rgba(255,255,255,0.98) !important;
-    border-color: rgba(0,0,0,0.12) !important;
+    border-color: rgba(0,0,0,0.15) !important;
 }
 body.theme-light .progress-circle::after {
     background: var(--progress-inner) !important;
