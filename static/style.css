@@ -93,7 +93,6 @@ body.theme-glassmorphic .glass {
     border: 1px solid var(--glass-border) !important;
 }
 body.theme-glassmorphic .glass:hover {
-    background: rgba(255,255,255,0.18) !important;
     border-color: rgba(255,255,255,0.35) !important;
     box-shadow: 0 12px 40px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.2) !important;
 }
